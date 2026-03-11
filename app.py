@@ -17,86 +17,81 @@ SIMU_CONFIG = {
     "Manœuvre": "#F8BBD0"      
 }
 
-# Génération des tranches de 30 min de 06:00 à 20:00
-HEURES_GRILLE = []
-for h in range(6, 20):
-    HEURES_GRILLE.append(f"{h:02d}:00")
-    HEURES_GRILLE.append(f"{h:02d}:30")
-HEURES_GRILLE.append("20:00")
+H_DEBUT = 6
+H_FIN = 20
+HAUTEUR_HEURE = 60 # 1 heure = 60 pixels
 
 st.set_page_config(page_title="Planning Naval Précis", layout="wide", page_icon="⚓")
 
-# --- STYLE CSS (GRILLE TYPE AGENDA) ---
-st.markdown("""
+# --- STYLE CSS (POSITIONNEMENT PRÉCIS) ---
+st.markdown(f"""
     <style>
-    .slot-container {
-        display: flex !important;
-        flex-direction: row !important;
-        gap: 2px !important;
-        width: 100% !important;
-        height: 100%;
-    }
-    .calendar-cell {
-        flex: 1 !important;
-        padding: 2px 4px !important;
-        border-radius: 3px !important;
-        font-size: 10px !important;
-        border: 1px solid rgba(0,0,0,0.05) !important;
-        color: #000 !important;
-        text-align: center !important;
-        font-weight: bold;
-        overflow: hidden;
-    }
-    .time-col {
-        font-size: 12px;
-        font-weight: bold;
-        color: #555;
-        text-align: right;
+    .planning-container {{
+        position: relative;
+        height: {(H_FIN - H_DEBUT) * HAUTEUR_HEURE}px;
+        border-left: 1px solid #ddd;
+        background-image: linear-gradient(#eee 1px, transparent 1px);
+        background-size: 100% {HAUTEUR_HEURE}px; /* Lignes horizontales toutes les heures */
+    }}
+    .time-col-container {{
+        height: {(H_FIN - H_DEBUT) * HAUTEUR_HEURE}px;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+    }}
+    .time-label {{
+        height: {HAUTEUR_HEURE}px;
+        display: flex;
+        align-items: flex-start;
+        justify-content: flex-end;
         padding-right: 10px;
-        border-right: 1px solid #ddd;
-    }
-    .grid-row {
-        border-bottom: 1px solid #f0f0f0;
-        height: 35px; /* Hauteur fixe pour aligner les heures */
-    }
-    .grid-row-hour {
-        border-bottom: 2px solid #e0e0e0;
-    }laus
-    .day-header {
+        font-weight: bold;
+        color: #003366;
+        font-size: 14px;
+        margin-top: -10px; /* Aligne le texte sur la ligne */
+    }}
+    .day-column {{
+        position: relative;
+        height: 100%;
+        border-right: 1px solid #eee;
+        background-color: rgba(255,255,255,0.5);
+    }}
+    .resa-block {{
+        position: absolute;
+        left: 2px;
+        right: 2px;
+        border-radius: 4px;
+        border: 1px solid rgba(0,0,0,0.1);
+        padding: 4px;
+        font-size: 11px;
+        font-weight: bold;
+        color: #000;
+        overflow: hidden;
+        z-index: 10;
+        box-shadow: 1px 1px 3px rgba(0,0,0,0.1);
+    }}
+    .day-header {{
         text-align: center;
         background-color: #003366;
         color: white;
         padding: 10px;
         border-radius: 5px;
-        font-weight: bold;
-    }
+        margin-bottom: 10px;
+    }}
     </style>
     """, unsafe_allow_html=True)
 
-# --- LOGIQUE ---
-def get_monday_from_week(year, week):
-    jan4 = datetime(year, 1, 4)
-    start_monday = jan4 - timedelta(days=jan4.weekday())
-    return start_monday + timedelta(weeks=week-1)
-
-def est_dans_creneau(horaire_str, heure_ligne):
-    """Vérifie si une réservation couvre la tranche de 30min de la ligne"""
+# --- LOGIQUE DE CALCUL ---
+def parse_horaire(h_str):
     try:
-        # Nettoyage et extraction (ex: "08h30 - 12h00")
-        times = re.findall(r'(\d+)h(\d+)?|(\d+):(\d+)?', str(horaire_str))
-        parts = []
+        times = re.findall(r'(\d+)[h:](\d+)?', str(h_str))
+        res = []
         for t in times:
-            h = int(t[0] or t[2])
-            m = int(t[1] or t[3] or 0)
-            parts.append(h + m/60)
-        
-        if len(parts) >= 2:
-            debut_resa, fin_resa = parts[0], parts[1]
-            h_ligne = int(heure_ligne.split(':')[0]) + (int(heure_ligne.split(':')[1])/60)
-            # La réservation couvre cette ligne si l'heure de la ligne est entre le début et la fin
-            return debut_resa <= h_ligne < fin_resa
-        return False
-    except: return False
+            h = int(t[0])
+            m = int(t[1]) if t[1] else 0
+            res.append(h + m/60)
+        return res if len(res) >= 2 else None
+    except: return None
 
 @st.cache_data(ttl=2)
 def load_data():
@@ -111,52 +106,58 @@ def load_data():
 df = load_data()
 
 # --- INTERFACE ---
-st.title("⚓ Planning de Navigation Précis")
+st.title("⚓ Planning Haute Précision")
 
-c1, c2, _ = st.columns([1, 1, 4])
+c1, c2, _ = st.columns([1.5, 1.5, 4])
 with c1: annee_sel = st.selectbox("Année", [2025, 2026, 2027], index=1)
 with c2: 
     curr_w = datetime.now().isocalendar()[1]
-    semaine_sel = st.selectbox("Semaine", range(1, 53), index=curr_w-1)
+    semaine_sel = st.selectbox("Semaine", range(1, 54), index=curr_w-1)
 
-monday = get_monday_from_week(annee_sel, semaine_sel)
+# Calcul des jours
+first_jan = datetime(annee_sel, 1, 4)
+monday = (first_jan - timedelta(days=first_jan.weekday())) + timedelta(weeks=semaine_sel-1)
 week_days = [monday + timedelta(days=i) for i in range(5)]
-day_names = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi"]
 
 # En-têtes
 cols = st.columns([0.6] + [1]*5)
-cols[0].write("")
 for i, d in enumerate(week_days):
-    cols[i+1].markdown(f"<div class='day-header'>{day_names[i]}<br>{d.strftime('%d/%m')}</div>", unsafe_allow_html=True)
+    cols[i+1].markdown(f"<div class='day-header'>{d.strftime('%A')}<br>{d.strftime('%d/%m')}</div>", unsafe_allow_html=True)
 
-# Grille temporelle
-for h_str in HEURES_GRILLE[:-1]: # On ne fait pas de ligne pour 20:00 (c'est la fin)
-    is_full_hour = h_str.endswith(":00")
-    row_class = "grid-row-hour" if is_full_hour else "grid-row"
-    
-    row_cols = st.columns([0.6] + [1]*5)
-    
-    # Heure à gauche (on affiche l'heure seulement sur les piles, ou partout)
-    row_cols[0].markdown(f"<div class='time-col'>{h_str if is_full_hour else '<span style=opacity:0.3>'+h_str+'</span>'}</div>", unsafe_allow_html=True)
-    
-    for i, d in enumerate(week_days):
-        with row_cols[i+1]:
-            mask = (df['Date_DT'].dt.date == d.date())
-            resas_du_jour = df[mask]
-            
-            # On cherche les résas qui occupent cette demi-heure précise
-            resas_actives = resas_du_jour[resas_du_jour['Horaire'].apply(lambda x: est_dans_creneau(x, h_str))]
-            
-            if not resas_actives.empty:
-                html = f'<div class="slot-container">'
-                for _, r in resas_actives.iterrows():
-                    color = SIMU_CONFIG.get(r['Simu'], "#EEEEEE")
-                    # On n'affiche le texte que sur la première ligne du créneau pour ne pas surcharger
-                    match = re.search(r'(\d+)[h:]?(\d+)?', str(r['Horaire']))
-                    label = f"<b>{r['Equipage']}</b>" if match and f"{int(match.group(1)):02d}:{int(match.group(2) or 0):02d}" == h_str else ""
-                    
-                    html += f'<div class="calendar-cell" style="background-color: {color};">{label}</div>'
-                html += '</div>'
-                st.markdown(html, unsafe_allow_html=True)
-            else:
-                st.markdown(f'<div class="{row_class}" style="height:35px;"></div>', unsafe_allow_html=True)
+# Grille de temps
+main_cols = st.columns([0.6] + [1]*5)
+
+# Colonne des heures
+with main_cols[0]:
+    html_hours = "<div class='time-col-container'>"
+    for h in range(H_DEBUT, H_FIN + 1):
+        html_hours += f"<div class='time-label'>{h:02d}:00</div>"
+    html_hours += "</div>"
+    st.markdown(html_hours, unsafe_allow_html=True)
+
+# Colonnes des jours avec blocs précis
+for i, d in enumerate(week_days):
+    with main_cols[i+1]:
+        st.markdown("<div class='planning-container'>", unsafe_allow_html=True)
+        
+        day_resas = df[df['Date_DT'].dt.date == d.date()]
+        
+        for _, r in day_resas.iterrows():
+            heures = parse_horaire(r['Horaire'])
+            if heures:
+                h_start, h_end = heures[0], heures[1]
+                
+                # Calcul de la position et de la taille
+                top = (h_start - H_DEBUT) * HAUTEUR_HEURE
+                height = (h_end - h_start) * HAUTEUR_HEURE
+                color = SIMU_CONFIG.get(r['Simu'], "#EEEEEE")
+                
+                # Affichage du bloc
+                st.markdown(f"""
+                    <div class="resa-block" style="top: {top}px; height: {height}px; background-color: {color};">
+                        {r['Equipage']}<br>
+                        <span style="font-size:9px; font-weight:normal;">{r['Horaire']}</span>
+                    </div>
+                """, unsafe_allow_html=True)
+        
+        st.markdown("</div>", unsafe_allow_html=True)
