@@ -16,13 +16,13 @@ ADMIN_PASSWORD = "1234"
 SIMU_CONFIG = {
     "JUPITER": "#1976D2",    # Bleu
     "MINERVE": "#C2185B",    # Violet-Rose
-    "JUNON": "#000000",      # Noir
-    "BACCHUS": "#757575",    # Gris
+    "JUNON": "#757575",      # Gris
+    "BACCHUS": "#388E3C",    # Vert
     "MARS": "#D32F2F",       # Rouge
-    "SATURNE": "#FF9800",    # Orange
-    "NEKKAR": "#C5A000",     # Jaune moutarde
+    "SATURNE": "#E65100",    # Orange profond
     "CRONOS": "#A1887F",     # Beige foncé
-    "PHOBOS": "#1A1A1A",     # Noir
+    "NEKKAR": "#C5A000",     # Jaune moutarde
+    "PHOBOS": "#DAA520",     # Jaune moutarde
     "PERSEE": "#558B2F",     # Vert Olive
     "SAGITTAIRE": "#4A148C"  # Violet profond
 }
