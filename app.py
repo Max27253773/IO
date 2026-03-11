@@ -18,53 +18,35 @@ SIMU_CONFIG = {
     "PERSEE": "#B2DFDB", "SAGITTAIRE": "#FFE0B2"
 }
 
-# Plage horaire : 06:00 à 20:00
+# Plage horaire : de 06:00 à 20:00 inclus
 QUARTS_HEURES = [f"{h:02d}:{m}" for h in range(6, 21) for m in ["00", "30"]]
 
 st.set_page_config(page_title="⚓ Planning Naval", layout="wide")
 
-# --- STYLE CSS (Support pour blocs uniques extensibles) ---
+# --- STYLE CSS (Support Blocs Uniques + Grille) ---
 st.markdown("""
     <style>
-    /* Conteneur relatif pour permettre le positionnement absolu du bloc */
     .slot-wrapper { position: relative; width: 100%; height: 45px; }
-    
-    /* Le bloc de réservation unique */
     .calendar-cell-unique { 
-        position: absolute; 
-        top: 2px; left: 2px; right: 2px;
-        z-index: 100; 
-        padding: 4px; 
-        border-radius: 4px; 
-        font-size: 11px; 
-        border: 1px solid rgba(0,0,0,0.2); 
-        color: #000 !important; 
-        text-align: center; 
-        font-weight: bold;
-        display: flex; 
-        flex-direction: column;
-        align-items: center; 
-        justify-content: center;
-        overflow: hidden;
-        box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
-        pointer-events: none; /* Évite les bugs de survol */
+        position: absolute; top: 2px; left: 2px; right: 2px;
+        z-index: 100; padding: 4px; border-radius: 4px; 
+        font-size: 11px; border: 1px solid rgba(0,0,0,0.2); 
+        color: #000 !important; text-align: center; font-weight: bold;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        overflow: hidden; box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
+        pointer-events: none;
     }
-    
     .time-col-full { font-size: 14px; font-weight: 900; color: #003366; text-align: right; padding-right: 15px; border-right: 4px solid #003366; }
     .time-col-half { font-size: 13px; font-style: italic; font-weight: 400; color: #555; text-align: right; padding-right: 15px; border-right: 4px solid #99abc0; }
-    
-    /* Grille : Heure pleine -> Ligne pleine | Demi-heure -> Pointillés */
     .grid-line-hour { border-bottom: 2px solid #888; height: 45px; background-color: rgba(0,0,0,0.02); }
     .grid-line-min { border-bottom: 1px dashed #ccc; height: 45px; }
-    
     .day-header { text-align: center; background-color: #003366; color: white; padding: 10px; border-radius: 4px; font-weight: bold; margin-bottom: 10px; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- LOGIQUE D'EXTRACTION DES HEURES ---
+# --- LOGIQUE INTERNE ---
 def extraire_heures(horaire_str):
     try:
-        # Cherche tous les nombres dans la chaîne (ex: "08:00 - 10:30")
         nums = re.findall(r'(\d+)', str(horaire_str))
         if len(nums) >= 4:
             h_deb = int(nums[0]) + int(nums[1])/60
@@ -103,58 +85,76 @@ if menu == "📅 Planning Hebdomadaire":
         cols[i+1].markdown(f"<div class='day-header'>{jours_fr[i]}<br>{d.strftime('%d/%m')}</div>", unsafe_allow_html=True)
 
     for q in QUARTS_HEURES:
+        if q == "20:30": continue
         row_cols = st.columns([0.6] + [1]*5)
         is_pile = q.endswith(":00")
         h_actuelle = int(q.split(':')[0]) + int(q.split(':')[1])/60
         
-        # Colonne de temps
-        time_class = "time-col-full" if is_pile else "time-col-half"
-        row_cols[0].markdown(f"<div class='{time_class}'>{q}</div>", unsafe_allow_html=True)
+        row_cols[0].markdown(f"<div class='{'time-col-full' if is_pile else 'time-col-half'}'>{q}</div>", unsafe_allow_html=True)
         
-        # Colonnes des jours
         for i, d in enumerate(week_days):
             with row_cols[i+1]:
                 resas_jour = df[df['Date_DT'].dt.date == d.date()]
                 html_blocs = ""
-                
                 for _, r in resas_jour.iterrows():
                     h_deb, h_fin = extraire_heures(r['Horaire'])
-                    # On ne dessine le bloc que si on est pile sur l'heure de DEBUT
                     if h_deb == h_actuelle:
-                        duree_h = h_fin - h_deb
-                        # Chaque tranche de 30min fait 45px de haut
-                        hauteur_px = int(duree_h * 2 * 45) - 4 
+                        hauteur_px = int((h_fin - h_deb) * 2 * 45) - 4 
                         color = SIMU_CONFIG.get(str(r['Simu']).strip().upper(), "#EEEEEE")
-                        
-                        html_blocs += f'''
-                        <div class="calendar-cell-unique" style="background-color:{color}; height:{hauteur_px}px;">
-                            <div style="font-size:12px;">{r["Equipage"]}</div>
-                            <div style="font-size:9px; opacity:0.8;">{r["Simu"]}</div>
-                        </div>
-                        '''
+                        html_blocs += f'<div class="calendar-cell-unique" style="background-color:{color}; height:{hauteur_px}px;">{r["Equipage"]}<br><span style="font-size:9px; font-weight:normal;">{r["Simu"]}</span></div>'
                 
-                # Grille de fond (toujours affichée)
                 grid_class = "grid-line-hour" if is_pile else "grid-line-min"
                 st.markdown(f"<div class='slot-wrapper'><div class='{grid_class}'></div>{html_blocs}</div>", unsafe_allow_html=True)
 
-# --- 2. STATS ---
+# --- 2. STATISTIQUES ---
 elif menu == "📊 Statistiques":
-    st.title("📊 Statistiques")
+    st.title("📊 Statistiques d'Utilisation")
     if not df.empty:
-        st.bar_chart(df['Simu'].value_counts())
+        col1, col2 = st.columns(2)
+        with col1: st.bar_chart(df['Simu'].value_counts())
+        with col2: st.bar_chart(df['Equipage'].value_counts().head(10))
+        st.divider()
         st.dataframe(df.drop(columns=['Date_DT']), use_container_width=True)
 
-# --- 3. ADMIN ---
+# --- 3. ADMINISTRATION ---
 elif menu == "🔐 Administration":
-    st.title("⚙️ Gestion")
+    st.title("⚙️ Gestion du Planning")
     pwd = st.sidebar.text_input("Mot de passe", type="password")
+    
     if pwd == ADMIN_PASSWORD:
-        with st.form("add_form"):
-            d = st.date_input("Date", format="DD/MM/YYYY")
-            eq = st.text_input("Équipage")
-            hr = st.text_input("Horaire (ex: 08:30 - 10:00)")
-            sm = st.selectbox("Simu", list(SIMU_CONFIG.keys()))
-            if st.form_submit_button("Ajouter"):
-                requests.post(SCRIPT_URL, data=json.dumps({"action":"add","date":d.strftime("%d/%m/%Y"),"equipage":eq,"horaire":hr,"simu":sm}))
-                st.success("OK !"); time.sleep(1); st.rerun()
-    else: st.info("Entrez le mot de passe.")
+        tab1, tab2, tab3 = st.tabs(["➕ Ajouter", "📝 Modifier", "🗑️ Supprimer"])
+        
+        def format_resa(idx):
+            r = df.loc[idx]
+            return f"{r['Date']} | {r['Horaire']} | {r['Simu']} | {r['Equipage']}"
+        
+        with tab1:
+            with st.form("form_add", clear_on_submit=True):
+                d = st.date_input("Date", format="DD/MM/YYYY")
+                eq = st.text_input("Équipage")
+                hr = st.text_input("Horaire (ex: 08:30 - 12:00)")
+                sm = st.selectbox("Simulateur", list(SIMU_CONFIG.keys()))
+                if st.form_submit_button("VALIDER L'AJOUT"):
+                    requests.post(SCRIPT_URL, data=json.dumps({"action":"add","date":d.strftime("%d/%m/%Y"),"equipage":eq,"horaire":hr,"simu":sm}))
+                    st.success("Réservation enregistrée !"); time.sleep(1); st.rerun()
+        
+        with tab2:
+            if not df.empty:
+                idx = st.selectbox("Choisir la réservation à modifier", df.index, format_func=format_resa)
+                with st.form("form_edit"):
+                    ed = st.date_input("Nouvelle date", value=df.loc[idx,'Date_DT'], format="DD/MM/YYYY")
+                    ee = st.text_input("Équipage", df.loc[idx,'Equipage'])
+                    eh = st.text_input("Horaire", df.loc[idx,'Horaire'])
+                    es = st.selectbox("Simulateur", list(SIMU_CONFIG.keys()), index=list(SIMU_CONFIG.keys()).index(str(df.loc[idx,'Simu']).strip()) if str(df.loc[idx,'Simu']).strip() in SIMU_CONFIG else 0)
+                    if st.form_submit_button("METTRE À JOUR"):
+                        requests.post(SCRIPT_URL, data=json.dumps({"action":"update","row":int(idx)+2,"date":ed.strftime("%d/%m/%Y"),"equipage":ee,"horaire":eh,"simu":es}))
+                        st.success("Mise à jour réussie !"); time.sleep(1); st.rerun()
+        
+        with tab3:
+            if not df.empty:
+                target = st.selectbox("Choisir la réservation à supprimer", df.index, format_func=format_resa)
+                if st.button("❌ Supprimer définitivement"):
+                    requests.post(SCRIPT_URL, data=json.dumps({"action":"delete","row":int(target)+2}))
+                    st.success("Supprimé !"); time.sleep(1); st.rerun()
+    else: 
+        st.info("Veuillez entrer le mot de passe dans la barre latérale.")
