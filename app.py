@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1mmPHzEY9p7ohdzvIYvwQOvqmKNa_8VQdZyl4sj1nksw/export?format=csv&gid=0"
 SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxhetuY5QpJEvl-Wv1BMGej5FeW6S3-WDcbS1DwcwUVT-Yt3e8th1XG9pPCcbrwPu5ITw/exec"
 
-# Définition des simulateurs et de leurs couleurs style "Pastel"
+# Couleurs pastel inspirées de votre image de référence
 SIMU_CONFIG = {
     "Passerelle 1": "#B3E5FC", # Bleu
     "Machine": "#C8E6C9",      # Vert
@@ -20,35 +20,36 @@ SIMU_CONFIG = {
 
 st.set_page_config(page_title="Planning Naval Visuel", layout="wide", page_icon="⚓")
 
-# --- STYLE CSS ---
+# --- STYLE CSS PERSONNALISÉ ---
 st.markdown("""
     <style>
     .calendar-cell {
         padding: 8px;
         border-radius: 4px;
-        margin-bottom: 4px;
+        margin-bottom: 5px;
         font-size: 13px;
         border: 1px solid rgba(0,0,0,0.1);
         color: #000000 !important;
-        line-height: 1.2;
+        background-color: #f9f9f9;
     }
     .day-header {
         text-align: center;
-        background-color: #1E3A5F;
+        background-color: #003366;
         color: white;
         padding: 10px;
         border-radius: 5px;
         font-weight: bold;
+        margin-bottom: 10px;
     }
-    .sim-sidebar {
+    .sim-label {
         font-weight: bold;
-        color: #1E3A5F;
-        padding-top: 20px;
+        color: #003366;
+        padding: 10px 0;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# --- FONCTIONS LOGIQUES ---
+# --- FONCTIONS DE CALCUL ---
 def extraire_heures_precises(horaire_str):
     try:
         blocs = re.findall(r'(\d+)[h:]?(\d+)?', str(horaire_str))
@@ -64,9 +65,10 @@ def load_data():
     try:
         url_force = f"{SHEET_CSV_URL}&v={time.time()}"
         data = pd.read_csv(url_force)
-        # Nettoyage et conversion
+        # Conversion forcée en datetime avec gestion des erreurs
         data['Date_DT'] = pd.to_datetime(data['Date'], errors='coerce')
-        data['Annee'] = data['Date_DT'].dt.year
+        # On supprime les lignes où la date est invalide pour éviter les crashs
+        data = data.dropna(subset=['Date_DT'])
         data['Heures'] = data['Horaire'].apply(extraire_heures_precises)
         return data
     except:
@@ -77,39 +79,36 @@ df = load_data()
 # --- NAVIGATION ---
 menu = st.sidebar.selectbox("Navigation ⚓", ["📅 Planning Visuel", "📊 Résumé d'Activité", "🔐 Administration"])
 
-# --- 1. PLANNING VISUEL ---
+# --- 1. PLANNING VISUEL (STYLE RESSOURCES) ---
 if menu == "📅 Planning Visuel":
-    st.title("🗓️ Calendrier de Planification des Ressources")
+    st.title("🗓️ Calendrier de Planification")
     
-    # Sélecteur de semaine
-    col_nav1, col_nav2 = st.columns([2, 4])
-    with col_nav1:
-        date_ref = st.date_input("Sélectionner une semaine", datetime.now())
+    col_nav, _ = st.columns([2, 4])
+    with col_nav:
+        # Date de référence pour choisir la semaine
+        selected_date = st.date_input("Semaine du :", datetime.now())
     
-    # Calcul des jours de la semaine choisie
-    start_week = date_ref - timedelta(days=date_ref.weekday())
-    days = [start_week + timedelta(days=i) for i in range(7)]
-    days_names = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"]
+    # Calcul des limites de la semaine (Lundi au Dimanche)
+    start_of_week = selected_date - timedelta(days=selected_date.weekday())
+    week_days = [start_of_week + timedelta(days=i) for i in range(7)]
+    day_names = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"]
 
-    st.write(f"### Semaine du {start_week.strftime('%d %B')} au {days[-1].strftime('%d %B %Y')}")
-
-    # En-têtes
+    # En-têtes des jours
     cols = st.columns([1.5] + [1]*7)
-    cols[0].markdown("<p style='text-align:center; font-weight:bold;'>Simulateurs</p>", unsafe_allow_html=True)
-    for i, d in enumerate(days):
-        cols[i+1].markdown(f"<div class='day-header'>{days_names[i]}<br>{d.strftime('%d/%m')}</div>", unsafe_allow_html=True)
+    cols[0].markdown("<div class='sim-label' style='text-align:center;'>Simulateurs</div>", unsafe_allow_html=True)
+    for i, d in enumerate(week_days):
+        cols[i+1].markdown(f"<div class='day-header'>{day_names[i]}<br>{d.strftime('%d/%m')}</div>", unsafe_allow_html=True)
 
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    # Grille de données
+    # Lignes par simulateur
     for simu, color in SIMU_CONFIG.items():
         row_cols = st.columns([1.5] + [1]*7)
-        row_cols[0].markdown(f"<p class='sim-sidebar'>{simu}</p>", unsafe_allow_html=True)
+        row_cols[0].markdown(f"<div class='sim-label'>{simu}</div>", unsafe_allow_html=True)
         
-        for i, d in enumerate(days):
-            # Filtrage précis par date
+        for i, d in enumerate(week_days):
+            # Filtrage sécurisé : on compare les dates uniquement
             if not df.empty:
-                mask = (df['Simu'] == simu) & (df['Date_DT'].dt.date == d.date())
+                # On compare le format date (Y-m-d) pour éviter les problèmes de fuseaux horaires ou NaT
+                mask = (df['Simu'] == simu) & (df['Date_DT'].dt.date == d)
                 resas = df[mask]
             else:
                 resas = pd.DataFrame()
@@ -120,27 +119,29 @@ if menu == "📅 Planning Visuel":
                         st.markdown(f"""
                             <div class="calendar-cell" style="background-color: {color};">
                                 <b>{r['Equipage']}</b><br>
-                                <small>{r['Horaire']}</small>
+                                <span style='font-size:11px;'>{r['Horaire']}</span>
                             </div>
                         """, unsafe_allow_html=True)
                 else:
-                    st.markdown('<div style="min-height:50px; border: 0.5px solid #f0f2f6; border-radius:4px;"></div>', unsafe_allow_html=True)
+                    st.markdown('<div style="min-height:50px; border: 1px dashed #e0e0e0; border-radius:4px; margin-bottom:5px;"></div>', unsafe_allow_html=True)
 
 # --- 2. RÉSUMÉ D'ACTIVITÉ ---
 elif menu == "📊 Résumé d'Activité":
-    st.header("📊 Synthèse d'entraînement")
-    if df.empty or df['Date_DT'].isna().all():
-        st.info("Aucune donnée à analyser.")
+    st.header("📊 Statistiques d'entraînement")
+    if df.empty:
+        st.info("Aucune donnée enregistrée.")
     else:
-        annees = sorted(df['Annee'].dropna().unique().astype(int), reverse=True)
+        df['Annee'] = df['Date_DT'].dt.year
+        annees = sorted(df['Annee'].unique().astype(int), reverse=True)
         sel_annee = st.selectbox("Année", annees)
         df_an = df[df['Annee'] == sel_annee]
         
         c1, c2, c3 = st.columns(3)
-        c1.metric("Volume total", f"{round(df_an['Heures'].sum(), 1)} h")
+        c1.metric("Heures totales", f"{round(df_an['Heures'].sum(), 1)}h")
         c2.metric("Équipages", df_an['Equipage'].nunique())
         c3.metric("Séances", len(df_an))
         
+        st.subheader("Volume par équipage")
         st.bar_chart(df_an.groupby('Equipage')['Heures'].sum())
 
 # --- 3. ADMINISTRATION ---
@@ -153,21 +154,21 @@ elif menu == "🔐 Administration":
             with st.form("add"):
                 d = st.date_input("Date")
                 e = st.text_input("Equipage")
-                h = st.text_input("Horaire (ex: 08h00 - 12h00)")
+                h = st.text_input("Horaire (ex: 08:30-12:00)")
                 s = st.selectbox("Simulateur", list(SIMU_CONFIG.keys()))
                 if st.form_submit_button("Enregistrer"):
                     requests.post(SCRIPT_URL, data=json.dumps({"action":"add","date":str(d),"equipage":e,"horaire":h,"simu":s}))
-                    st.success("Ajouté !")
+                    st.success("Séance ajoutée !")
                     st.cache_data.clear()
 
         with t2:
             if not df.empty:
-                df['label'] = df['Date'].astype(str) + " | " + df['Equipage']
-                sel = st.selectbox("Sélectionner la séance à modifier", df['label'].tolist())
+                df['label'] = df['Date_DT'].dt.strftime('%Y-%m-%d') + " | " + df['Equipage']
+                sel = st.selectbox("Sélectionner la séance", df['label'].tolist())
                 idx = df[df['label'] == sel].index[0]
                 row_sel = df.loc[idx]
                 with st.form("edit"):
-                    nd = st.date_input("Date", pd.to_datetime(row_sel['Date']))
+                    nd = st.date_input("Date", row_sel['Date_DT'])
                     ne = st.text_input("Equipage", row_sel['Equipage'])
                     nh = st.text_input("Horaire", row_sel['Horaire'])
                     ns = st.selectbox("Simu", list(SIMU_CONFIG.keys()), index=list(SIMU_CONFIG.keys()).index(row_sel['Simu']) if row_sel['Simu'] in SIMU_CONFIG else 0)
@@ -178,8 +179,8 @@ elif menu == "🔐 Administration":
 
         with t3:
             if not df.empty:
-                df['label_del'] = df['Date'].astype(str) + " | " + df['Equipage']
-                sel_d = st.selectbox("Séance à supprimer", df['label_del'].tolist())
+                df['label_del'] = df['Date_DT'].dt.strftime('%Y-%m-%d') + " | " + df['Equipage']
+                sel_d = st.selectbox("Supprimer la séance", df['label_del'].tolist())
                 idx_d = df[df['label_del'] == sel_d].index[0]
                 if st.checkbox("Confirmer la suppression"):
                     if st.button("Supprimer"):
