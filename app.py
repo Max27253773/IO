@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1mmPHzEY9p7ohdzvIYvwQOvqmKNa_8VQdZyl4sj1nksw/export?format=csv&gid=0"
 SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxhetuY5QpJEvl-Wv1BMGej5FeW6S3-WDcbS1DwcwUVT-Yt3e8th1XG9pPCcbrwPu5ITw/exec"
 
+# IMPORTANT : Vérifiez que les noms ici correspondent EXACTEMENT à ceux de votre Excel
 SIMU_CONFIG = {
     "Passerelle 1": "#B3E5FC", 
     "Machine": "#C8E6C9",      
@@ -25,25 +26,26 @@ TRANCHES = [
 
 st.set_page_config(page_title="Planning Naval", layout="wide", page_icon="⚓")
 
-# --- STYLE CSS (FLUIDE & CÔTE À CÔTE) ---
+# --- STYLE CSS (RÉPARÉ) ---
 st.markdown("""
     <style>
     .slot-container {
-        display: flex;
-        flex-direction: row;
-        gap: 5px;
-        width: 100%;
+        display: flex !important;
+        flex-direction: row !important;
+        gap: 4px !important;
+        width: 100% !important;
+        min-height: 60px;
     }
     .calendar-cell {
-        flex: 1;
-        padding: 8px 4px;
-        border-radius: 4px;
-        font-size: 11px;
-        border: 1px solid rgba(0,0,0,0.1);
+        flex: 1 !important;
+        padding: 6px 2px !important;
+        border-radius: 4px !important;
+        font-size: 11px !important;
+        border: 1px solid rgba(0,0,0,0.1) !important;
         color: #000 !important;
-        text-align: center;
-        min-width: 0; /* Évite le débordement */
-        word-wrap: break-word;
+        text-align: center !important;
+        min-width: 0 !important;
+        word-wrap: break-word !important;
     }
     .time-label {
         background-color: #f8f9fa;
@@ -51,7 +53,10 @@ st.markdown("""
         text-align: center;
         color: #003366;
         border-right: 2px solid #003366;
-        padding: 10px 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
     }
     .day-header {
         text-align: center;
@@ -60,6 +65,7 @@ st.markdown("""
         padding: 10px;
         border-radius: 5px;
         font-weight: bold;
+        font-size: 14px;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -93,15 +99,13 @@ df = load_data()
 menu = st.sidebar.selectbox("Navigation ⚓", ["📅 Planning Semaine", "📊 Résumé", "🔐 Admin"])
 
 if menu == "📅 Planning Semaine":
-    st.title("🗓️ Planning Hebdomadaire des Simulateurs")
+    st.title("🗓️ Planning Hebdomadaire")
     
     col_nav, _ = st.columns([2, 4])
     with col_nav:
         selected_date = st.date_input("Semaine du :", datetime.now())
     
-    # Lundi de la semaine sélectionnée
     start_of_week = (selected_date - timedelta(days=selected_date.weekday()))
-    # On crée une liste d'objets DATE (pas datetime)
     week_days = [(start_of_week + timedelta(days=i)) for i in range(5)]
     day_names = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi"]
 
@@ -119,27 +123,25 @@ if menu == "📅 Planning Semaine":
         
         for i, d in enumerate(week_days):
             with row_cols[i+1]:
-                # CORRECTION ICI : d est déjà une date, on compare directement
                 mask = (df['Date_DT'].dt.date == d)
                 resas_du_jour = df[mask]
                 resas_tranche = resas_du_jour[resas_du_jour['Horaire'].apply(lambda x: appartient_a_tranche(x, t_start, t_end))]
                 
                 if not resas_tranche.empty:
+                    # Construction propre de la chaîne HTML
                     html_content = '<div class="slot-container">'
                     for _, r in resas_tranche.iterrows():
+                        # On récupère la couleur, sinon gris (#EEEEEE)
                         color = SIMU_CONFIG.get(r['Simu'], "#EEEEEE")
-                        html_content += f"""
-                            <div class="calendar-cell" style="background-color: {color};">
-                                <b>{r['Equipage']}</b><br>{r['Simu']}
-                            </div>
-                        """
+                        html_content += f'<div class="calendar-cell" style="background-color: {color};"><b>{r["Equipage"]}</b><br>{r["Simu"]}</div>'
                     html_content += '</div>'
+                    
+                    # L'élément CRUCIAL : unsafe_allow_html=True
                     st.markdown(html_content, unsafe_allow_html=True)
                 else:
                     st.markdown('<div style="min-height:50px; border-bottom: 1px solid #f0f2f6;"></div>', unsafe_allow_html=True)
         st.divider()
 
-# --- BLOCS ADMIN (IDENTIQUES AU CODE PRÉCÉDENT) ---
 elif menu == "🔐 Admin":
-    st.subheader("Gestion des séances")
-    # ... (Ajouter / Modifier / Supprimer)
+    st.info("Utilisez cet onglet pour gérer vos séances.")
+    # ... (le reste du code admin suit)
