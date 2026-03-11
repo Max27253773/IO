@@ -23,7 +23,7 @@ QUARTS_HEURES = [f"{h:02d}:{m}" for h in range(6, 21) for m in ["00", "30"]]
 
 st.set_page_config(page_title="⚓ Planning Naval", layout="wide")
 
-# --- STYLE CSS (Optimisé pour la différenciation Heure/Demi-heure) ---
+# --- STYLE CSS ---
 st.markdown("""
     <style>
     .slot-container { display: flex !important; flex-direction: row !important; gap: 2px !important; width: 100% !important; height: 100%; }
@@ -33,14 +33,10 @@ st.markdown("""
         color: #000 !important; text-align: center !important; font-weight: bold; 
         min-height: 40px; display: flex; align-items: center; justify-content: center;
     }
-    /* Style différencié pour la colonne de temps */
     .time-col-full { font-size: 14px; font-weight: 800; color: #003366; text-align: right; padding-right: 15px; border-right: 4px solid #003366; background-color: #f0f2f6; }
     .time-col-half { font-size: 12px; font-weight: 400; color: #666; text-align: right; padding-right: 15px; border-right: 4px solid #99abc0; }
-    
-    /* Style différencié pour les lignes de grille */
     .grid-line-hour { border-bottom: 2px solid #b0bec5; height: 45px; background-color: rgba(0, 51, 102, 0.02); }
     .grid-line-min { border-bottom: 1px dashed #cfd8dc; height: 45px; }
-    
     .day-header { text-align: center; background-color: #003366; color: white; padding: 10px; border-radius: 4px; font-weight: bold; margin-bottom: 10px; }
     </style>
     """, unsafe_allow_html=True)
@@ -63,6 +59,7 @@ def load_data():
     try:
         url = f"{SHEET_CSV_URL}&v={time.time()}"
         data = pd.read_csv(url)
+        # Formatage français pour la lecture CSV
         data['Date_DT'] = pd.to_datetime(data['Date'], dayfirst=True, errors='coerce')
         return data.dropna(subset=['Date_DT', 'Horaire'])
     except: return pd.DataFrame()
@@ -70,10 +67,10 @@ def load_data():
 df = load_data()
 
 # --- NAVIGATION ---
-menu = st.sidebar.radio("MENU", ["📅 Planning Hebdo", "📊 Statistiques", "🔐 Administration"])
+menu = st.sidebar.radio("MENU", ["📅 Planning Hebdomadaire", "📊 Statistiques", "🔐 Administration"])
 
 # --- 1. PLANNING ---
-if menu == "📅 Planning Hebdo":
+if menu == "📅 Planning Hebdomadaire":
     st.title("⚓ Planning des Simulateurs")
     c1, c2, _ = st.columns([1, 1, 4])
     with c1: annee_sel = st.selectbox("Année", [2025, 2026, 2027], index=1)
@@ -83,14 +80,13 @@ if menu == "📅 Planning Hebdo":
     week_days = [monday + timedelta(days=i) for i in range(5)]
 
     cols = st.columns([0.6] + [1]*5)
+    jours_fr = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi"]
     for i, d in enumerate(week_days):
-        cols[i+1].markdown(f"<div class='day-header'>{d.strftime('%A')}<br>{d.strftime('%d/%m')}</div>", unsafe_allow_html=True)
+        cols[i+1].markdown(f"<div class='day-header'>{jours_fr[i]}<br>{d.strftime('%d/%m')}</div>", unsafe_allow_html=True)
 
     for q in QUARTS_HEURES:
         row_cols = st.columns([0.6] + [1]*5)
         is_pile = q.endswith(":00")
-        
-        # Application du style différencié sur la colonne heure
         time_class = "time-col-full" if is_pile else "time-col-half"
         row_cols[0].markdown(f"<div class='{time_class}'>{q}</div>", unsafe_allow_html=True)
         
@@ -101,11 +97,9 @@ if menu == "📅 Planning Hebdo":
                     html = '<div class="slot-container">'
                     for _, r in resas.iterrows():
                         color = SIMU_CONFIG.get(str(r['Simu']).strip(), "#EEEEEE")
-                        label = f"{r['Equipage']}"
-                        html += f'<div class="calendar-cell" style="background-color: {color};" title="{r["Simu"]}">{label}</div>'
+                        html += f'<div class="calendar-cell" style="background-color: {color};" title="{r["Simu"]}">{r["Equipage"]}</div>'
                     st.markdown(html + '</div>', unsafe_allow_html=True)
                 else:
-                    # Application du style différencié sur la ligne vide
                     grid_class = "grid-line-hour" if is_pile else "grid-line-min"
                     st.markdown(f"<div class='{grid_class}'></div>", unsafe_allow_html=True)
 
@@ -114,44 +108,54 @@ elif menu == "📊 Statistiques":
     st.title("📊 Statistiques d'Utilisation")
     if not df.empty:
         col1, col2 = st.columns(2)
-        with col1: st.bar_chart(df['Simu'].value_counts())
-        with col2: st.bar_chart(df['Equipage'].value_counts().head(10))
+        with col1: 
+            st.subheader("Utilisation par Simulateur")
+            st.bar_chart(df['Simu'].value_counts())
+        with col2: 
+            st.subheader("Top 10 des Équipages")
+            st.bar_chart(df['Equipage'].value_counts().head(10))
         st.divider()
+        st.subheader("Historique Complet")
         st.dataframe(df.drop(columns=['Date_DT']), use_container_width=True)
 
 # --- 3. ADMINISTRATION (VERROUILLÉE) ---
 elif menu == "🔐 Administration":
-    st.title("⚙️ Administration")
+    st.title("⚙️ Gestion des Réservations")
     pwd = st.sidebar.text_input("Mot de passe", type="password")
     if pwd == ADMIN_PASSWORD:
         tab1, tab2, tab3 = st.tabs(["➕ Ajouter", "📝 Modifier", "🗑️ Supprimer"])
         def format_resa(idx):
             r = df.loc[idx]
             return f"{r['Date']} | {r['Horaire']} | {r['Simu']} | {r['Equipage']}"
+        
         with tab1:
             with st.form("form_add", clear_on_submit=True):
-                d, eq, hr = st.date_input("Date"), st.text_input("Équipage"), st.text_input("Horaire")
-                sm = st.selectbox("Simu", list(SIMU_CONFIG.keys()))
-                if st.form_submit_button("Ajouter"):
+                d, eq, hr = st.date_input("Date"), st.text_input("Équipage"), st.text_input("Horaire (ex: 08h30 - 12h00)")
+                sm = st.selectbox("Simulateur", list(SIMU_CONFIG.keys()))
+                if st.form_submit_button("Ajouter au planning"):
+                    # Envoi de la date au format français DD/MM/YYYY
                     requests.post(SCRIPT_URL, data=json.dumps({"action":"add","date":d.strftime("%d/%m/%Y"),"equipage":eq,"horaire":hr,"simu":sm}))
-                    st.success("Ajouté !"); time.sleep(1); st.rerun()
+                    st.success("Réservation ajoutée !"); time.sleep(1); st.rerun()
+        
         with tab2:
             if not df.empty:
-                idx = st.selectbox("Sélectionner", df.index, format_func=format_resa)
+                idx = st.selectbox("Sélectionner la ligne à modifier", df.index, format_func=format_resa)
                 with st.form("form_edit"):
                     ed, ee, eh = st.date_input("Date", df.loc[idx,'Date_DT']), st.text_input("Équipage", df.loc[idx,'Equipage']), st.text_input("Horaire", df.loc[idx,'Horaire'])
-                    es = st.selectbox("Simu", list(SIMU_CONFIG.keys()), index=list(SIMU_CONFIG.keys()).index(str(df.loc[idx,'Simu']).strip()) if str(df.loc[idx,'Simu']).strip() in SIMU_CONFIG else 0)
+                    es = st.selectbox("Simulateur", list(SIMU_CONFIG.keys()), index=list(SIMU_CONFIG.keys()).index(str(df.loc[idx,'Simu']).strip()) if str(df.loc[idx,'Simu']).strip() in SIMU_CONFIG else 0)
                     if st.form_submit_button("Mettre à jour"):
                         requests.post(SCRIPT_URL, data=json.dumps({"action":"update","row":int(idx)+2,"date":ed.strftime("%d/%m/%Y"),"equipage":ee,"horaire":eh,"simu":es}))
-                        st.success("Mis à jour !"); time.sleep(1); st.rerun()
+                        st.success("Modification enregistrée !"); time.sleep(1); st.rerun()
+        
         with tab3:
             if not df.empty:
-                target = st.selectbox("Supprimer", df.index, format_func=format_resa)
-                if st.button("❌ Supprimer la sélection"): st.session_state['confirm_del'] = True
+                target = st.selectbox("Sélectionner la ligne à supprimer", df.index, format_func=format_resa)
+                if st.button("❌ Supprimer la réservation"): st.session_state['confirm_del'] = True
                 if st.session_state.get('confirm_del'):
-                    st.warning(f"Confirmer suppression ?")
-                    if st.button("✅ CONFIRMER"):
+                    st.warning(f"Voulez-vous vraiment supprimer cette réservation ?")
+                    if st.button("✅ OUI, CONFIRMER"):
                         requests.post(SCRIPT_URL, data=json.dumps({"action":"delete","row":int(target)+2}))
                         st.session_state['confirm_del'] = False
-                        st.success("Supprimé !"); time.sleep(1); st.rerun()
-    else: st.error("Accès restreint.")
+                        st.success("Réservation supprimée !"); time.sleep(1); st.rerun()
+    else: 
+        st.error("Veuillez saisir le mot de passe pour accéder à la gestion.")
