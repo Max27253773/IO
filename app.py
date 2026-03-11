@@ -173,7 +173,7 @@ elif menu == "📊 Statistiques":
         an_sel = st.selectbox("Choisir l'année", an_dispo, index=len(an_dispo)-1)
         stats_simu = df[df['Annee'] == an_sel].groupby('Simu')['Duree_H'].sum().sort_values(ascending=False)
         st.bar_chart(stats_simu)
-        st.table(stats_simu.rename("Heures Totales"))
+        # Ligne st.table supprimée ici
     else:
         st.warning("Aucune donnée disponible.")
 
