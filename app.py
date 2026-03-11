@@ -29,7 +29,7 @@ SIMU_CONFIG = {
 
 QUARTS_HEURES = [f"{h:02d}:{m}" for h in range(6, 21) for m in ["00", "30"]]
 
-st.set_page_config(page_title="⚓ Planning", layout="wide")
+st.set_page_config(page_title="⚓ Planning Naval", layout="wide")
 
 # --- LOGIQUE DONNÉES ---
 def extraire_heures(horaire_str):
@@ -89,8 +89,24 @@ df = load_data()
 menu = st.sidebar.radio("MENU", ["📅 Planning", "📊 Statistiques", "🔐 Administration"])
 
 st.sidebar.divider()
-annee_sel = st.sidebar.selectbox("Année", [2025, 2026, 2027], index=1)
-semaine_sel = st.sidebar.selectbox("Semaine", range(1, 54), index=datetime.now().isocalendar()[1]-1)
+
+# --- CALCUL DES VALEURS ACTUELLES ---
+maintenant = datetime.now()
+annee_actuelle = maintenant.year
+# isocalendar() renvoie (année, semaine, jour)
+semaine_actuelle = maintenant.isocalendar()[1]
+
+# Configuration dynamique des sélecteurs
+liste_annees = [2025, 2026, 2027]
+try:
+    index_annee = liste_annees.index(annee_actuelle)
+except ValueError:
+    index_annee = 1 # Valeur par défaut (2026) si l'année n'est pas dans la liste
+
+annee_sel = st.sidebar.selectbox("Année", liste_annees, index=index_annee)
+# On met semaine_actuelle - 1 car l'index commence à 0
+semaine_sel = st.sidebar.selectbox("Semaine", range(1, 54), index=semaine_actuelle - 1)
+
 simu_sel = st.sidebar.selectbox("Simulateur", list(SIMU_CONFIG.keys()))
 
 current_color = SIMU_CONFIG.get(simu_sel, "#000000")
@@ -173,7 +189,6 @@ elif menu == "📊 Statistiques":
         an_sel = st.selectbox("Choisir l'année", an_dispo, index=len(an_dispo)-1)
         stats_simu = df[df['Annee'] == an_sel].groupby('Simu')['Duree_H'].sum().sort_values(ascending=False)
         st.bar_chart(stats_simu)
-        # Ligne st.table supprimée ici
     else:
         st.warning("Aucune donnée disponible.")
 
