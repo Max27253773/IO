@@ -6,7 +6,7 @@ import re
 import json
 from datetime import datetime, timedelta
 
-# --- CONFIGURATION ---
+# --- CONFIGURATION (VERROUILLÉE) ---
 SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1mmPHzEY9p7ohdzvIYvwQOvqmKNa_8VQdZyl4sj1nksw/export?format=csv&gid=0"
 SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxhetuY5QpJEvl-Wv1BMGej5FeW6S3-WDcbS1DwcwUVT-Yt3e8th1XG9pPCcbrwPu5ITw/exec"
 ADMIN_PASSWORD = "1234" 
@@ -22,39 +22,28 @@ QUARTS_HEURES = [f"{h:02d}:{m}" for h in range(6, 21) for m in ["00", "30"]]
 
 st.set_page_config(page_title="⚓ Planning Naval", layout="wide")
 
-# --- CSS RADICAL (Tableau Propre) ---
+# --- STYLE CSS (Retour au visuel initial fonctionnel) ---
 st.markdown("""
     <style>
-    .planning-table { width: 100%; border-collapse: collapse; font-family: sans-serif; table-layout: fixed; }
-    .planning-table th { background-color: #003366; color: white; padding: 10px; border: 1px solid #ddd; }
-    .planning-table td { height: 40px; border-left: 1px solid #ddd; border-right: 1px solid #ddd; vertical-align: middle; padding: 0 5px; position: relative; }
+    .slot-container { display: flex !important; flex-direction: row !important; gap: 2px !important; width: 100% !important; height: 100%; }
+    .calendar-cell { 
+        flex: 1 !important; padding: 4px !important; border-radius: 3px !important; 
+        font-size: 12px !important; border: 1px solid rgba(0,0,0,0.1) !important; 
+        color: #000 !important; text-align: center !important; font-weight: bold; 
+        min-height: 40px; display: flex; align-items: center; justify-content: center;
+    }
+    .time-col-full { font-size: 14px; font-weight: 800; color: #003366; text-align: right; padding-right: 15px; border-right: 4px solid #003366; background-color: #f0f2f6; }
+    .time-col-half { font-size: 12px; font-weight: 400; color: #666; text-align: right; padding-right: 15px; border-right: 4px solid #99abc0; }
     
-    /* Lignes : Pleine pour :00, Pointillée pour :30 */
-    .row-00 { border-bottom: 2px solid #333 !important; }
-    .row-30 { border-bottom: 1px dashed #bbb !important; }
+    /* Configuration initiale : Pointillés pour l'heure, Pleine pour la demi */
+    .grid-line-hour { border-bottom: 1px dashed #cfd8dc; height: 45px; }
+    .grid-line-min { border-bottom: 2px solid #b0bec5; height: 45px; background-color: rgba(0, 51, 102, 0.02); }
     
-    /* Colonne Heure */
-    .col-time { width: 80px; text-align: right; padding-right: 15px !important; border: none !important; }
-    .txt-00 { font-weight: 900; font-size: 15px; color: #003366; }
-    .txt-30 { font-style: italic; font-size: 13px; color: #666; }
-    
-    /* Conteneur de réservation */
-    .res-flex { display: flex; gap: 4px; height: 32px; align-items: center; justify-content: center; }
-    .res-item { flex: 1; height: 100%; display: flex; align-items: center; justify-content: center; 
-                font-size: 11px; font-weight: bold; border-radius: 4px; border: 1px solid rgba(0,0,0,0.1); color: black !important; }
+    .day-header { text-align: center; background-color: #003366; color: white; padding: 10px; border-radius: 4px; font-weight: bold; margin-bottom: 10px; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- LOGIQUE ---
-@st.cache_data(ttl=2)
-def load_data():
-    try:
-        url = f"{SHEET_CSV_URL}&v={time.time()}"
-        data = pd.read_csv(url)
-        data['Date_DT'] = pd.to_datetime(data['Date'], dayfirst=True, errors='coerce')
-        return data.dropna(subset=['Date_DT', 'Horaire'])
-    except: return pd.DataFrame()
-
+# --- LOGIQUE INTERNE ---
 def est_dans_quart_heure(horaire_str, quart_str):
     try:
         nums = re.findall(r'(\d+)', str(horaire_str))
@@ -67,62 +56,88 @@ def est_dans_quart_heure(horaire_str, quart_str):
         return debut <= (h_q + m_q/60) < fin
     except: return False
 
+@st.cache_data(ttl=2)
+def load_data():
+    try:
+        url = f"{SHEET_CSV_URL}&v={time.time()}"
+        data = pd.read_csv(url)
+        data['Date_DT'] = pd.to_datetime(data['Date'], dayfirst=True, errors='coerce')
+        return data.dropna(subset=['Date_DT', 'Horaire'])
+    except: return pd.DataFrame()
+
 df = load_data()
 
-# --- INTERFACE ---
-menu = st.sidebar.radio("MENU", ["📅 Planning Hebdomadaire", "🔐 Administration"])
+# --- NAVIGATION ---
+menu = st.sidebar.radio("MENU", ["📅 Planning Hebdomadaire", "📊 Statistiques", "🔐 Administration"])
 
+# --- 1. PLANNING ---
 if menu == "📅 Planning Hebdomadaire":
     st.title("⚓ Planning des Simulateurs")
-    
     c1, c2, _ = st.columns([1, 1, 4])
     with c1: annee_sel = st.selectbox("Année", [2025, 2026, 2027], index=1)
     with c2: semaine_sel = st.selectbox("Semaine", range(1, 54), index=datetime.now().isocalendar()[1]-1)
 
     monday = (datetime(annee_sel, 1, 4) - timedelta(days=datetime(annee_sel, 1, 4).weekday())) + timedelta(weeks=semaine_sel-1)
     week_days = [monday + timedelta(days=i) for i in range(5)]
-    jours_fr = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi"]
 
-    # Construction du tableau HTML
-    html = '<table class="planning-table"><thead><tr><th style="width:80px">Heure</th>'
+    cols = st.columns([0.6] + [1]*5)
+    jours_fr = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi"]
     for i, d in enumerate(week_days):
-        html += f'<th>{jours_fr[i]}<br>{d.strftime("%d/%m")}</th>'
-    html += '</tr></thead><tbody>'
+        cols[i+1].markdown(f"<div class='day-header'>{jours_fr[i]}<br>{d.strftime('%d/%m')}</div>", unsafe_allow_html=True)
 
     for q in QUARTS_HEURES:
+        row_cols = st.columns([0.6] + [1]*5)
         is_pile = q.endswith(":00")
-        row_class = "row-00" if is_pile else "row-30"
-        txt_class = "txt-00" if is_pile else "txt-30"
+        time_class = "time-col-full" if is_pile else "time-col-half"
+        row_cols[0].markdown(f"<div class='{time_class}'>{q}</div>", unsafe_allow_html=True)
         
-        html += f'<tr><td class="col-time {row_class} {txt_class}">{q}</td>'
-        
-        for d in week_days:
-            resas = df[(df['Date_DT'].dt.date == d.date()) & (df['Horaire'].apply(lambda x: est_dans_quart_heure(x, q)))]
-            html += f'<td class="{row_class}">'
-            
-            if not resas.empty:
-                html += '<div class="res-flex">'
-                for _, r in resas.iterrows():
-                    color = SIMU_CONFIG.get(str(r['Simu']).strip().upper(), "#EEEEEE")
-                    html += f'<div class="res-item" style="background-color:{color}" title="{r["Simu"]}">{r["Equipage"]}</div>'
-                html += '</div>'
-            
-            html += '</td>'
-        html += '</tr>'
-    
-    html += '</tbody></table>'
-    st.markdown(html, unsafe_allow_html=True)
+        for i, d in enumerate(week_days):
+            with row_cols[i+1]:
+                resas = df[(df['Date_DT'].dt.date == d.date()) & (df['Horaire'].apply(lambda x: est_dans_quart_heure(x, q)))]
+                if not resas.empty:
+                    html = '<div class="slot-container">'
+                    for _, r in resas.iterrows():
+                        color = SIMU_CONFIG.get(str(r['Simu']).strip(), "#EEEEEE")
+                        html += f'<div class="calendar-cell" style="background-color: {color};" title="{r["Simu"]}">{r["Equipage"]}</div>'
+                    st.markdown(html + '</div>', unsafe_allow_html=True)
+                else:
+                    grid_class = "grid-line-hour" if is_pile else "grid-line-min"
+                    st.markdown(f"<div class='{grid_class}'></div>", unsafe_allow_html=True)
 
-# --- ADMIN ---
+# --- 2. STATISTIQUES ---
+elif menu == "📊 Statistiques":
+    st.title("📊 Statistiques")
+    if not df.empty:
+        st.bar_chart(df['Simu'].value_counts())
+        st.dataframe(df.drop(columns=['Date_DT']), use_container_width=True)
+
+# --- 3. ADMINISTRATION ---
 elif menu == "🔐 Administration":
-    st.title("⚙️ Administration")
+    st.title("⚙️ Gestion")
     pwd = st.sidebar.text_input("Mot de passe", type="password")
     if pwd == ADMIN_PASSWORD:
-        with st.form("add"):
-            d = st.date_input("Date", format="DD/MM/YYYY")
-            eq = st.text_input("Équipage")
-            hr = st.text_input("Horaire (ex: 10:00 - 12:00)")
-            sm = st.selectbox("Simulateur", list(SIMU_CONFIG.keys()))
-            if st.form_submit_button("Ajouter"):
-                requests.post(SCRIPT_URL, data=json.dumps({"action":"add","date":d.strftime("%d/%m/%Y"),"equipage":eq,"horaire":hr,"simu":sm}))
-                st.success("Ajouté !"); time.sleep(1); st.rerun()
+        tab1, tab2, tab3 = st.tabs(["➕ Ajouter", "📝 Modifier", "🗑️ Supprimer"])
+        
+        with tab1:
+            with st.form("form_add", clear_on_submit=True):
+                d = st.date_input("Date", format="DD/MM/YYYY")
+                eq = st.text_input("Équipage")
+                hr = st.text_input("Horaire (ex: 08:00 - 12:00)")
+                sm = st.selectbox("Simulateur", list(SIMU_CONFIG.keys()))
+                if st.form_submit_button("Valider l'ajout"):
+                    requests.post(SCRIPT_URL, data=json.dumps({"action":"add","date":d.strftime("%d/%m/%Y"),"equipage":eq,"horaire":hr,"simu":sm}))
+                    st.success("Ajouté !"); time.sleep(1); st.rerun()
+        
+        with tab2:
+            if not df.empty:
+                idx = st.selectbox("Ligne à modifier", df.index)
+                with st.form("form_edit"):
+                    ed = st.date_input("Date", value=df.loc[idx,'Date_DT'], format="DD/MM/YYYY")
+                    ee = st.text_input("Équipage", df.loc[idx,'Equipage'])
+                    eh = st.text_input("Horaire", df.loc[idx,'Horaire'])
+                    es = st.selectbox("Simulateur", list(SIMU_CONFIG.keys()))
+                    if st.form_submit_button("Modifier"):
+                        requests.post(SCRIPT_URL, data=json.dumps({"action":"update","row":int(idx)+2,"date":ed.strftime("%d/%m/%Y"),"equipage":ee,"horaire":eh,"simu":es}))
+                        st.success("Modifié !"); time.sleep(1); st.rerun()
+    else:
+        st.info("Veuillez saisir le mot de passe.")
