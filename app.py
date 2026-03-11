@@ -1,21 +1,15 @@
 import streamlit as st
-import pandas as pd
-from shupdatesheet import update_sheet # On va utiliser une petite astuce de connexion
-
-# Remplacez par l'URL de votre Google Sheet créé à l'étape 1
-SHEET_URL = "https://docs.google.com/spreadsheets/d/1mmPHzEY9p7ohdzvIYvwQOvqmKNa_8VQdZyl4sj1nksw/edit?gid=0#gid=0"
-# Pour transformer l'URL en lien de téléchargement CSV direct
-CSV_URL = SHEET_URL.replace("/edit#gid=", "/export?format=csv&gid=")
+from streamlit_gsheets import GSheetsConnection
 
 st.set_page_config(page_title="Planning Simu", layout="wide")
 st.title("✈️ Planning Équipages")
 
-# Lecture des données depuis Google Sheets
-try:
-    df = pd.read_csv(CSV_URL)
-except:
-    st.error("Connexion au planning impossible. Vérifiez l'URL du Google Sheet.")
-    df = pd.DataFrame(columns=["Date", "Equipage", "Horaire", "Simu"])
+# Connexion sécurisée au Google Sheet
+conn = st.connection("gsheets", type=GSheetsConnection)
+
+# Lecture des données
+# Note : on précise le nom de la feuille si nécessaire, sinon il prend la première
+df = conn.read(ttl="1m") # ttl="1m" rafraîchit les données toutes les minutes
 
 menu = st.sidebar.selectbox("Menu", ["Consulter le Planning", "Administration 🔐"])
 
@@ -23,10 +17,12 @@ if menu == "Consulter le Planning":
     if df.empty:
         st.info("Aucun vol prévu.")
     else:
-        # Affichage par date
-        for _, row in df.iterrows():
+        # On trie par date pour que ce soit lisible
+        df_view = df.sort_values(by="Date")
+        for _, row in df_view.iterrows():
             with st.expander(f"📅 {row['Date']} - {row['Equipage']}"):
-                st.write(f"**Horaire :** {row['Horaire']} | **Appareil :** {row['Simu']}")
+                st.write(f"**Horaire :** {row['Horaire']}")
+                st.write(f"**Appareil :** {row['Simu']}")
 
 elif menu == "Administration 🔐":
     pwd = st.sidebar.text_input("Code Admin", type="password")
@@ -38,10 +34,12 @@ elif menu == "Administration 🔐":
             h = st.text_input("Horaire")
             s = st.selectbox("Simu", ["SIM 1", "SIM 2", "SIM 3"])
             
-            if st.form_submit_button("Enregistrer dans le cloud"):
-                # Ici, on ajoute la ligne au Google Sheet
-                # Note: Pour que cela écrive vraiment, il faut configurer st.connection
-                # Mais pour tester la lecture, cette structure est déjà fonctionnelle.
-                st.success("Séance ajoutée (Vérifiez votre Google Sheet) !")
-    else:
-        st.info("Entrez le code pour modifier le programme.")
+            if st.form_submit_button("Enregistrer"):
+                # On ajoute la nouvelle ligne au tableau actuel
+                new_row = pd.DataFrame([{"Date": str(d), "Equipage": e, "Horaire": h, "Simu": s}])
+                updated_df = pd.concat([df, new_row], ignore_index=True)
+                
+                # On renvoie tout vers Google Sheets
+                conn.update(data=updated_df)
+                st.success("Planning mis à jour sur Google Sheets !")
+                st.rerun()
