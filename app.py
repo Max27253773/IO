@@ -19,51 +19,46 @@ SIMU_CONFIG = {
     "PERSEE": "#B2DFDB", "SAGITTAIRE": "#FFE0B2"
 }
 
-# Plage horaire : de 06:00 à 20:00
 QUARTS_HEURES = [f"{h:02d}:{m}" for h in range(6, 21) for m in ["00", "30"]]
 
 st.set_page_config(page_title="⚓ Planning Naval", layout="wide")
 
-# --- FONCTION DE CAPTURE (JS) - CADRAGE CORRIGÉ ---
+# --- NOUVELLE FONCTION DE CAPTURE (PLUS ROBUSTE) ---
 def bouton_capture(nom_fichier):
-    # Composant HTML/JS pour capturer UNIQUEMENT le calendrier
     components.html(f"""
+        <html>
+        <body>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
         <script>
         function doCapture() {{
-            // MODIFICATION ICI : On cible l'élément spécifique 'stBlock' qui contient le calendrier
-            // window.parent.document nous permet de sortir de l'iframe du composant
-            const doc = window.parent.document;
+            // On cible la zone principale de l'application (le contenu à droite de la sidebar)
+            const mainContent = window.parent.document.querySelector('section.main');
             
-            // On cherche le conteneur du titre '⚓ Planning : ...' et on remonte d'un niveau
-            const titleEl = Array.from(doc.querySelectorAll('h1')).find(el => el.textContent.includes('⚓ Planning :'));
-            
-            if (titleEl) {{
-                // Le parent direct du titre contient généralement tout le planning
-                const calendarBlock = titleEl.closest('[data-testid="stBlock"]');
-                
-                html2canvas(calendarBlock, {{
-                    backgroundColor: "#FFFFFF",
-                    scale: 2, // Haute définition
-                    useCORS: true,
-                    // Petits ajustements pour s'assurer que tout rentre
-                    logging: false,
-                    onclone: function(clonedDoc) {{
-                        // Optionnel : masquer des éléments indésirables dans le clone avant capture
-                    }}
-                }}).then(canvas => {{
+            if (!mainContent) {{
+                alert("Erreur : Impossible d'accéder à la zone d'affichage.");
+                return;
+            }}
+
+            html2canvas(mainContent, {{
+                backgroundColor: "#FFFFFF",
+                scale: 2,
+                useCORS: true,
+                logging: false,
+                allowTaint: true
+            }}).then(canvas => {{
+                try {{
                     const link = document.createElement('a');
                     link.download = '{nom_fichier}.png';
                     link.href = canvas.toDataURL("image/png");
                     link.click();
-                }});
-            }} else {{
-                console.error("Impossible de trouver le conteneur du calendrier.");
-            }}
+                }} catch (e) {{
+                    alert("Le téléchargement a échoué. Vérifiez les autorisations de votre navigateur.");
+                }}
+            }});
         }}
         </script>
         <button onclick="doCapture()" style="
-            background-color: #003366; 
+            background-color: #ff4b4b; 
             color: white; 
             border: none; 
             padding: 12px; 
@@ -72,10 +67,11 @@ def bouton_capture(nom_fichier):
             font-weight: bold;
             width: 100%;
             font-family: sans-serif;
-            font-size: 14px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-            📸 Télécharger l'IMAGE du calendrier
+            font-size: 14px;">
+            📸 TÉLÉCHARGER L'IMAGE
         </button>
+        </body>
+        </html>
     """, height=70)
 
 # --- STYLE CSS ---
@@ -85,20 +81,16 @@ st.markdown("""
     .calendar-cell-unique { 
         position: absolute; top: 2px; left: 2px; right: 2px;
         z-index: 100; padding: 4px; border-radius: 4px; 
-        font-size: 13px; border: 1px solid rgba(0,0,0,0.2); 
+        font-size: 12px; border: 1px solid rgba(0,0,0,0.2); 
         color: #000 !important; text-align: center; font-weight: bold;
         display: flex; align-items: center; justify-content: center;
         overflow: hidden; box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
-        pointer-events: none; /* Évite de bloquer les clics si besoin */
     }
     .time-col-full { font-size: 14px; font-weight: 900; color: #003366; text-align: right; padding-right: 15px; border-right: 4px solid #003366; }
-    .time-col-half { font-size: 13px; font-style: italic; font-weight: 400; color: #555; text-align: right; padding-right: 15px; border-right: 4px solid #99abc0; }
+    .time-col-half { font-size: 12px; font-style: italic; font-weight: 400; color: #555; text-align: right; padding-right: 15px; border-right: 4px solid #99abc0; }
     .grid-line-hour { border-bottom: 2px solid #888; height: 45px; background-color: rgba(0,0,0,0.02); }
     .grid-line-min { border-bottom: 1px dashed #ccc; height: 45px; }
     .day-header { text-align: center; background-color: #003366; color: white; padding: 10px; border-radius: 4px; font-weight: bold; margin-bottom: 10px; }
-    
-    /* Pour s'assurer que html2canvas capture bien tout, on donne un fond blanc explicite */
-    [data-testid="stBlock"] { background-color: white; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -128,15 +120,14 @@ df = load_data()
 menu = st.sidebar.radio("MENU", ["📅 Planning Hebdomadaire", "📊 Statistiques", "🔐 Administration"])
 
 st.sidebar.divider()
-st.sidebar.subheader("Sélection")
+st.sidebar.subheader("Réglages")
 annee_sel = st.sidebar.selectbox("Année", [2025, 2026, 2027], index=1)
 semaine_sel = st.sidebar.selectbox("Semaine", range(1, 54), index=datetime.now().isocalendar()[1]-1)
 simu_sel = st.sidebar.selectbox("Simulateur", list(SIMU_CONFIG.keys()))
 
 st.sidebar.divider()
-st.sidebar.write("💾 **Exporter**")
-# Nom de fichier dynamique
-filename = f"Planning_{simu_sel}_S{semaine_sel}_{annee_sel}"
+st.sidebar.write("💾 **Export**")
+filename = f"Planning_{simu_sel}_S{semaine_sel}"
 bouton_capture(filename)
 
 # --- AFFICHAGE ---
@@ -144,10 +135,8 @@ monday = (datetime(annee_sel, 1, 4) - timedelta(days=datetime(annee_sel, 1, 4).w
 week_days = [monday + timedelta(days=i) for i in range(5)]
 
 if menu == "📅 Planning Hebdomadaire":
-    # ATTENTION : Le titre h1 est crucial pour le sélecteur JS
     st.title(f"⚓ Planning : {simu_sel}")
     
-    # Conteneur principal pour le planning (stBlock)
     cols = st.columns([0.6] + [1]*5)
     jours_fr = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi"]
     for i, d in enumerate(week_days):
@@ -193,30 +182,29 @@ elif menu == "🔐 Administration":
             r = df.loc[idx]
             return f"{r['Date']} | {r['Horaire']} | {r['Simu']} | {r['Equipage']}"
         with tab1:
-            with st.form("add_form", clear_on_submit=True):
+            with st.form("add_f", clear_on_submit=True):
                 d = st.date_input("Date", format="DD/MM/YYYY")
                 eq = st.text_input("Équipage")
                 hr = st.text_input("Horaire (ex: 08:30 - 12:00)")
                 sm = st.selectbox("Simulateur", list(SIMU_CONFIG.keys()))
                 if st.form_submit_button("VALIDER"):
                     requests.post(SCRIPT_URL, data=json.dumps({"action":"add","date":d.strftime("%d/%m/%Y"),"equipage":eq,"horaire":hr,"simu":sm}))
-                    st.success("Ajouté !"); time.sleep(1); st.rerun()
+                    st.success("OK"); time.sleep(1); st.rerun()
         with tab2:
             if not df.empty:
-                idx = st.selectbox("Modifier", df.index, format_func=format_resa)
-                with st.form("edit_form"):
+                idx = st.selectbox("Ligne", df.index, format_func=format_resa)
+                with st.form("edit_f"):
                     ed = st.date_input("Date", value=df.loc[idx,'Date_DT'], format="DD/MM/YYYY")
                     ee = st.text_input("Équipage", df.loc[idx,'Equipage'])
                     eh = st.text_input("Horaire", df.loc[idx,'Horaire'])
-                    es = st.selectbox("Simulateur", list(SIMU_CONFIG.keys()), index=list(SIMU_CONFIG.keys()).index(str(df.loc[idx,'Simu']).strip()) if str(df.loc[idx,'Simu']).strip() in SIMU_CONFIG else 0)
-                    if st.form_submit_button("SAUVEGARDER"):
+                    es = st.selectbox("Simu", list(SIMU_CONFIG.keys()), index=list(SIMU_CONFIG.keys()).index(str(df.loc[idx,'Simu']).strip()) if str(df.loc[idx,'Simu']).strip() in SIMU_CONFIG else 0)
+                    if st.form_submit_button("MODIFIER"):
                         requests.post(SCRIPT_URL, data=json.dumps({"action":"update","row":int(idx)+2,"date":ed.strftime("%d/%m/%Y"),"equipage":ee,"horaire":eh,"simu":es}))
-                        st.success("Mis à jour !"); time.sleep(1); st.rerun()
+                        st.success("OK"); time.sleep(1); st.rerun()
         with tab3:
             if not df.empty:
                 target = st.selectbox("Supprimer", df.index, format_func=format_resa)
-                confirm = st.checkbox("Confirmer la suppression")
-                if st.button("❌ Supprimer définitivement", disabled=not confirm):
+                if st.button("❌ Supprimer définitivement"):
                     requests.post(SCRIPT_URL, data=json.dumps({"action":"delete","row":int(target)+2}))
-                    st.success("Supprimé !"); time.sleep(1); st.rerun()
-    else: st.info("Mot de passe requis.")
+                    st.success("Supprimé"); time.sleep(1); st.rerun()
+    else: st.info("Entrez le mot de passe.")
