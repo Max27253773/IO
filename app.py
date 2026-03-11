@@ -15,73 +15,75 @@ SIMU_CONFIG = {
     "Manœuvre": "#F8BBD0"      
 }
 
-H_DEBUT = 6
-H_FIN = 20
-HAUTEUR_HEURE = 60 
+# On crée une liste de toutes les 15 minutes de 06h à 20h
+QUARTS_HEURES = []
+for h in range(6, 20):
+    for m in ["00", "15", "30", "45"]:
+        QUARTS_HEURES.append(f"{h:02d}:{m}")
 
 st.set_page_config(page_title="Planning Naval", layout="wide")
 
-# --- CSS GLOBAL ---
-st.markdown(f"""
+# --- STYLE CSS (GRILLE SOLIDE) ---
+st.markdown("""
     <style>
-    .day-column-container {{
-        position: relative;
-        width: 100%;
-        height: {(H_FIN - H_DEBUT) * HAUTEUR_HEURE}px;
-        background-color: white;
-        border: 1px solid #ccc;
-        background-image: linear-gradient(#f0f0f0 1px, transparent 1px);
-        background-size: 100% {HAUTEUR_HEURE}px;
-        margin-bottom: 20px;
-    }}
-    .resa-item {{
-        position: absolute;
-        left: 2px;
-        right: 2px;
-        border-radius: 4px;
-        border: 2px solid rgba(0,0,0,0.3); /* Bordure plus forte pour test */
-        padding: 4px;
-        font-size: 11px;
+    .slot-container {
+        display: flex !important;
+        flex-direction: row !important;
+        gap: 2px !important;
+        width: 100% !important;
+        height: 100%;
+    }
+    .calendar-cell {
+        flex: 1 !important;
+        padding: 2px !important;
+        border-radius: 2px !important;
+        font-size: 10px !important;
+        border: 1px solid rgba(0,0,0,0.1) !important;
+        color: #000 !important;
+        text-align: center !important;
         font-weight: bold;
-        color: black !important;
-        overflow: hidden;
-        z-index: 999;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        text-align: center;
-    }}
-    .time-label-cell {{
-        height: {HAUTEUR_HEURE}px;
-        line-height: {HAUTEUR_HEURE}px;
+        min-height: 20px;
+    }
+    .time-col {
+        font-size: 12px;
         font-weight: bold;
+        color: #003366;
         text-align: right;
         padding-right: 10px;
-        color: #003366;
-    }}
-    .header-box {{
+        border-right: 2px solid #003366;
+    }
+    .grid-line-hour { border-bottom: 2px solid #ccc; height: 25px; }
+    .grid-line-min { border-bottom: 1px dashed #eee; height: 25px; }
+    
+    .day-header {
         text-align: center;
         background-color: #003366;
         color: white;
-        padding: 10px;
-        border-radius: 5px;
-        margin-bottom: 5px;
+        padding: 8px;
+        border-radius: 4px;
         font-weight: bold;
-    }}
+    }
     </style>
     """, unsafe_allow_html=True)
 
-def parse_horaire_precis(h_str):
-    if pd.isna(h_str): return None
+def est_dans_quart_heure(horaire_str, quart_str):
+    """Vérifie si le créneau couvre ce quart d'heure précis"""
     try:
-        nums = re.findall(r'(\d+)', str(h_str))
+        nums = re.findall(r'(\d+)', str(horaire_str))
         if len(nums) >= 4:
             h1, m1, h2, m2 = map(int, nums[:4])
-            return [h1 + m1/60, h2 + m2/60]
+            debut = h1 + m1/60
+            fin = h2 + m2/60
         elif len(nums) == 2:
-            return [float(nums[0]), float(nums[1])]
-        return None
-    except: return None
+            debut, fin = float(nums[0]), float(nums[1])
+        else: return False
+        
+        h_q = int(quart_str.split(':')[0])
+        m_q = int(quart_str.split(':')[1])
+        temps_q = h_q + m_q/60
+        
+        return debut <= temps_q < fin
+    except: return False
 
 @st.cache_data(ttl=2)
 def load_data():
@@ -94,8 +96,7 @@ def load_data():
 
 df = load_data()
 
-# --- INTERFACE ---
-st.title("⚓ Planning Naval Haute Précision")
+st.title("⚓ Planning Naval (Précision 15min)")
 
 c1, c2, _ = st.columns([1, 1, 4])
 with c1: annee_sel = st.selectbox("Année", [2025, 2026, 2027], index=1)
@@ -107,40 +108,38 @@ jan4 = datetime(annee_sel, 1, 4)
 monday = (jan4 - timedelta(days=jan4.weekday())) + timedelta(weeks=semaine_sel-1)
 week_days = [monday + timedelta(days=i) for i in range(5)]
 
+# En-têtes
 cols = st.columns([0.6] + [1]*5)
-
-# Colonne des heures
-with cols[0]:
-    st.markdown("<div style='margin-top:55px;'>", unsafe_allow_html=True)
-    for h in range(H_DEBUT, H_FIN + 1):
-        st.markdown(f"<div class='time-label-cell'>{h:02d}:00</div>", unsafe_allow_html=True)
-    st.markdown("</div>", unsafe_allow_html=True)
-
-# Colonnes des jours
 for i, d in enumerate(week_days):
-    with cols[i+1]:
-        st.markdown(f"<div class='header-box'>{d.strftime('%A')}<br>{d.strftime('%d/%m')}</div>", unsafe_allow_html=True)
-        
-        # On prépare TOUT le HTML du jour dans une seule chaîne
-        day_html = "<div class='day-column-container'>"
-        
-        day_resas = df[df['Date_DT'].dt.date == d.date()]
-        
-        for _, r in day_resas.iterrows():
-            heures = parse_horaire_precis(r['Horaire'])
-            if heures:
-                h_start, h_end = heures[0], heures[1]
-                if h_end > H_DEBUT and h_start < H_FIN:
-                    top = (max(h_start, H_DEBUT) - H_DEBUT) * HAUTEUR_HEURE
-                    height = (min(h_end, H_FIN) - max(h_start, H_DEBUT)) * HAUTEUR_HEURE
+    cols[i+1].markdown(f"<div class='day-header'>{d.strftime('%A')}<br>{d.strftime('%d/%m')}</div>", unsafe_allow_html=True)
+
+# Grille
+for q in QUARTS_HEURES:
+    row_cols = st.columns([0.6] + [1]*5)
+    
+    # Affichage de l'heure uniquement sur les piles (:00)
+    is_pile = q.endswith(":00")
+    row_cols[0].markdown(f"<div class='time-col'>{q if is_pile else ''}</div>", unsafe_allow_html=True)
+    
+    for i, d in enumerate(week_days):
+        with row_cols[i+1]:
+            day_resas = df[df['Date_DT'].dt.date == d.date()]
+            resas_actives = day_resas[day_resas['Horaire'].apply(lambda x: est_dans_quart_heure(x, q))]
+            
+            if not resas_actives.empty:
+                html = '<div class="slot-container">'
+                for _, r in resas_actives.iterrows():
                     color = SIMU_CONFIG.get(str(r['Simu']).strip(), "#EEEEEE")
+                    # On affiche le texte seulement au tout début du créneau
+                    nums = re.findall(r'(\d+)', str(r['Horaire']))
+                    label = ""
+                    if nums:
+                        h_start = f"{int(nums[0]):02d}:{int(nums[1] if len(nums)>1 else 0):02d}"
+                        if h_start == q: label = f"{r['Equipage']}"
                     
-                    day_html += f"""
-                        <div class="resa-item" style="top: {top}px; height: {height}px; background-color: {color};">
-                            {r['Equipage']}<br><span style='font-size:8px;'>{r['Simu']}</span>
-                        </div>
-                    """
-        
-        day_html += "</div>"
-        # Affichage unique par colonne
-        st.markdown(day_html, unsafe_allow_html=True)
+                    html += f'<div class="calendar-cell" style="background-color: {color};">{label}</div>'
+                html += '</div>'
+                st.markdown(html, unsafe_allow_html=True)
+            else:
+                div_class = "grid-line-hour" if is_pile else "grid-line-min"
+                st.markdown(f"<div class='{div_class}'></div>", unsafe_allow_html=True)
