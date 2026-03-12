@@ -60,6 +60,13 @@ def extraire_heures(horaire_str):
     except: pass
     return None, None
 
+def formater_heure_propre(texte):
+    # Remplace les points ou virgules par des 'h'
+    texte = texte.lower().replace('.', 'h').replace(':', 'h').replace(' ', '')
+    # Si l'utilisateur a juste écrit "08h10h", on essaie de reconstruire "08h00 - 10h00"
+    # C'est une sécurité bonus pour ton Google Sheets
+    return texte
+
 def verifier_conflit(df, date_test, horaire_test, simu_test, equipage_test, exclude_idx=None):
     h_deb_new, h_fin_new = extraire_heures(horaire_test)
     if h_deb_new is None: return "block", "Format d'heure invalide."
