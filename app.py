@@ -134,7 +134,6 @@ st.sidebar.markdown(
 monday = (datetime(annee_sel, 1, 4) - timedelta(days=datetime(annee_sel, 1, 4).weekday())) + timedelta(weeks=semaine_sel-1)
 week_days = [monday + timedelta(days=i) for i in range(5)]
 
-# La date d est maintenant définie globalement pour tous les onglets
 d = week_days[jours_fr_liste.index(choix_j_global)]
 
 current_color = SIMU_CONFIG.get(simu_sel, "#000000")
@@ -182,9 +181,10 @@ df_view = df[df['Simu'].str.strip().str.upper() == simu_sel.upper()]
 if menu == "📅 Planning":
     st.markdown(f"<h1>⚓ {simu_sel}</h1>", unsafe_allow_html=True)
     if mode_vue == "Jour":
-        d = week_days[jours_fr_liste.index(choix_jour)]
+        # On utilise choix_j_global qui vient de la sidebar
+        d = week_days[jours_fr_liste.index(choix_j_global)]
         
-        st.markdown(f"<div style='text-align:center; background-color:{current_color}; color:{text_on_color}; padding:8px; font-weight:900; border:2px solid black; box-shadow: 2px 2px 0px black; margin-bottom:10px;'>{choix_jour} {d.strftime('%d/%m')}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='text-align:center; background-color:{current_color}; color:{text_on_color}; padding:8px; font-weight:900; border:2px solid black; box-shadow: 2px 2px 0px black; margin-bottom:10px;'>{choix_j_global} {d.strftime('%d/%m')}</div>", unsafe_allow_html=True)
         
         # --- DESSIN DU PLANNING ---
         html_jour = '<div class="planning-frame">'
@@ -254,13 +254,11 @@ if menu == "📅 Planning":
 elif menu == "🖥️ Supervision":
     st.markdown("<h1>🖥️ Vue d'ensemble des Simulateurs</h1>", unsafe_allow_html=True)
     
-    # Sélecteur de jour pour la supervision
-    d_sup = week_days[jours_fr_liste.index(choix_j_sup)]
-    
-    st.info(f"Visualisation de tous les simulateurs pour le **{choix_j_sup} {d_sup.strftime('%d/%m/%Y')}**")
+    # On utilise choix_j_global (sidebar) et d (calculé plus haut)
+    st.info(f"Visualisation de tous les simulateurs pour le **{choix_j_global} {d.strftime('%d/%m/%Y')}**")
 
-    # Filtrage des données pour ce jour précis
-    df_jour = df[df['Date_DT'].dt.date == d_sup.date()]
+    # On utilise d pour le filtrage
+    df_jour = df[df['Date_DT'].dt.date == d.date()]
 
     # Création de la grille de données (Heures en lignes, Simus en colonnes)
     # On crée une liste d'heures (toutes les 30 min)
