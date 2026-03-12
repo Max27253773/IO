@@ -8,6 +8,12 @@ import io
 from datetime import datetime, timedelta
 from PIL import Image, ImageDraw, ImageFont
 
+# --- CONFIGURATION ---
+st.set_page_config(page_title="⚓ Planning", layout="wide")
+
+# --- MESSAGE ALERTE MODE CLAIR ---
+st.warning("⚠️ **AFFICHAGE OPTIMAL** : Pour une meilleure visibilité, assurez-vous que votre téléphone est en **MODE CLAIR**. Le mode sombre peut masquer certains textes.")
+
 # --- CONFIGURATION FIXE ---
 SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1mmPHzEY9p7ohdzvIYvwQOvqmKNa_8VQdZyl4sj1nksw/export?format=csv&gid=0"
 SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxhetuY5QpJEvl-Wv1BMGej5FeW6S3-WDcbS1DwcwUVT-Yt3e8th1XG9pPCcbrwPu5ITw/exec"
