@@ -302,11 +302,18 @@ elif menu == "📊 Statistiques":
 
 elif menu == "🔐 Administration":
     st.markdown("<h1>⚙️ Gestion des Réservations</h1>", unsafe_allow_html=True)
-    pwd = st.sidebar.text_input("Saisir le mot de passe", type="password")
     
-    if pwd == ADMIN_PASSWORD:
+    # Plus besoin de 'pwd = st.sidebar.text_input...' ici !
+    # On utilise directement la variable 'is_admin' définie plus haut
+    
+    if is_admin:
         tab1, tab2, tab3 = st.tabs(["➕ Ajouter", "📝 Modifier", "🗑️ Supprimer"])
-        df_filtre_admin = df[(df['Date_DT'].dt.isocalendar().week == semaine_sel) & (df['Date_DT'].dt.year == annee_sel)].sort_values(by=['Date_DT', 'Horaire'])
+        
+        # Le reste de ton code d'administration (df_filtre_admin, etc.) continue ici...
+        df_filtre_admin = df[
+            (df['Date_DT'].dt.isocalendar().week == semaine_sel) & 
+            (df['Date_DT'].dt.year == annee_sel)
+        ].sort_values(by=['Date_DT', 'Horaire'])
 
         with tab1:
             with st.form("ajouter_form", clear_on_submit=True):
@@ -350,4 +357,6 @@ elif menu == "🔐 Administration":
                     requests.post(SCRIPT_URL, data=json.dumps({"action":"delete","row":int(t_del)+2}))
                     st.success("🗑️ Supprimé !"), time.sleep(1), st.rerun()
     else:
-        st.error("🔑 Entrez le mot de passe dans la barre latérale.")
+        # Message si l'utilisateur n'est pas admin
+        st.error("🔒 Accès réservé. Veuillez saisir le mot de passe dans la barre latérale pour accéder à la gestion.")
+        st.info("L'administration permet d'ajouter, modifier ou supprimer des créneaux de manière avancée.")
