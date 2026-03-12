@@ -60,24 +60,32 @@ def extraire_heures(horaire_str):
     except: pass
     return None, None
 
-def verifier_conflit(df, date_test, horaire_test, simu_test, exclude_idx=None):
-    """Vérifie si un créneau chevauche une réservation existante"""
+def verifier_conflit(df, date_test, horaire_test, simu_test, equipage_test, exclude_idx=None):
     h_deb_new, h_fin_new = extraire_heures(horaire_test)
-    if h_deb_new is None: return False, "Format d'heure invalide."
+    if h_deb_new is None: return "block", "Format d'heure invalide."
     
     date_test_dt = pd.to_datetime(date_test)
-    # Filtrer par même jour et même simulateur
-    match_df = df[(df['Date_DT'].dt.date == date_test_dt.date()) & 
-                  (df['Simu'].str.strip().str.upper() == simu_test.upper())]
+    eq_test = str(equipage_test).strip().upper()
     
-    for idx, row in match_df.iterrows():
-        if exclude_idx is not None and idx == exclude_idx:
-            continue
+    # 1. Vérification SIMULATEUR (Bloquant)
+    match_simu = df[(df['Date_DT'].dt.date == date_test_dt.date()) & 
+                    (df['Simu'].str.strip().str.upper() == simu_test.upper())]
+    for idx, row in match_simu.iterrows():
+        if exclude_idx is not None and idx == exclude_idx: continue
         h_deb_ex, h_fin_ex = extraire_heures(row['Horaire'])
-        if h_deb_ex is not None:
-            if max(h_deb_new, h_deb_ex) < min(h_fin_new, h_fin_ex):
-                return True, f"Conflit avec {row['Equipage']} ({row['Horaire']})"
-    return False, ""
+        if h_deb_ex is not None and max(h_deb_new, h_deb_ex) < min(h_fin_new, h_fin_ex):
+            return "block", f"ALERTE : Le simulateur {simu_test} est déjà pris par {row['Equipage']}."
+
+    # 2. Vérification ÉQUIPAGE (Doublon autorisé avec confirmation)
+    match_eq = df[(df['Date_DT'].dt.date == date_test_dt.date()) & 
+                  (df['Equipage'].str.strip().str.upper() == eq_test)]
+    for idx, row in match_eq.iterrows():
+        if exclude_idx is not None and idx == exclude_idx: continue
+        h_deb_ex, h_fin_ex = extraire_heures(row['Horaire'])
+        if h_deb_ex is not None and max(h_deb_new, h_deb_ex) < min(h_fin_new, h_fin_ex):
+            return "warn", f"DOUBLON : L'équipage {eq_test} est déjà sur {row['Simu']} à cette heure."
+
+    return "ok", ""
 
 @st.cache_data(ttl=2)
 def load_data():
@@ -207,25 +215,29 @@ if menu == "📅 Planning":
         if is_admin:
             with st.expander("⚡ RÉSERVATION RAPIDE", expanded=False):
                 with st.form("quick_booking"):
-                    c1, c2 = st.columns(2)
-                    q_eq = c1.text_input("Équipage", placeholder="Nom")
-                    q_hr = c2.text_input("Horaire", placeholder="08h00 - 10h00")
-                    if st.form_submit_button("Vérifier et valider la réservation"):
-                        if q_eq and q_hr:
-                            # On utilise la fonction conflit que tu as déjà
-                            conf, msg = verifier_conflit(df, d, q_hr, simu_sel)
-                            if conf:
-                                st.error(msg)
-                            else:
-                                requests.post(SCRIPT_URL, data=json.dumps({
-                                    "action":"add",
-                                    "date":d.strftime("%d/%m/%Y"),
-                                    "equipage":q_eq.upper(),
-                                    "horaire":q_hr,
-                                    "simu":simu_sel
-                                }))
-                                st.success("Ajouté !"), time.sleep(1), st.rerun()
-
+            c1, c2 = st.columns(2)
+            q_eq = c1.text_input("Équipage", placeholder="Nom")
+            q_hr = c2.text_input("Horaire", placeholder="08h00 - 10h00")
+            
+            # Case à cocher pour forcer si doublon
+            force_confirm = st.checkbox("Autoriser le doublon (Equipage déjà ailleurs)")
+            
+            if st.form_submit_button("Vérifier et valider"):
+                if q_eq and q_hr:
+                    status, msg = verifier_conflit(df, d, q_hr, simu_sel, q_eq)
+                    
+                    if status == "block":
+                        st.error(msg)
+                    elif status == "warn" and not force_confirm:
+                        st.warning(msg)
+                        st.info("Cochez la case ci-dessus pour confirmer le doublon.")
+                    else:
+                        # On enregistre (soit c'est OK, soit c'est WARN mais coché)
+                        requests.post(SCRIPT_URL, data=json.dumps({
+                            "action":"add", "date":d.strftime("%d/%m/%Y"),
+                            "equipage":q_eq.upper(), "horaire":q_hr, "simu":simu_sel
+                        }))
+                        st.success("✅ Réservé !"), time.sleep(1), st.rerun()
     else:
         # MODE SEMAINE
         cols = st.columns([0.6] + [1]*5)
@@ -402,10 +414,13 @@ elif menu == "🔐 Administration":
                 sm_add = st.selectbox("Simu", list(SIMU_CONFIG.keys()), index=list(SIMU_CONFIG.keys()).index(simu_sel))
                 if st.form_submit_button("Vérifier et Ajouter"):
                     if eq_add and hr_add:
-                        conflit, msg = verifier_conflit(df, d_add, hr_add, sm_add)
-                        if conflit:
-                            st.error(f"❌ IMPOSSIBLE : {msg}")
+                        # ON AJOUTE 'eq_add' À LA FIN ICI
+                        status, msg = verifier_conflit(df, d_add, hr_add, sm_add, eq_add)
+                        
+                        if status == "block":
+                            st.error(f"❌ {msg}")
                         else:
+                            # On ajoute même si c'est "warn" car c'est l'admin
                             requests.post(SCRIPT_URL, data=json.dumps({"action":"add","date":d_add.strftime("%d/%m/%Y"),"equipage":eq_add.upper(),"horaire":hr_add,"simu":sm_add}))
                             st.success("✅ Réservation validée !"), time.sleep(1), st.rerun()
                     else:
@@ -420,8 +435,10 @@ elif menu == "🔐 Administration":
                     eh = st.text_input("Horaire", df.loc[idx_mod,'Horaire'])
                     es = st.selectbox("Simu", list(SIMU_CONFIG.keys()), index=list(SIMU_CONFIG.keys()).index(str(df.loc[idx_mod,'Simu']).strip().upper()))
                     if st.form_submit_button("Vérifier et Enregistrer"):
-                        conflit, msg = verifier_conflit(df, ed, eh, es, exclude_idx=idx_mod)
-                        if conflit:
+                        # ON AJOUTE 'ee' À LA FIN ICI
+                        status, msg = verifier_conflit(df, ed, eh, es, ee, exclude_idx=idx_mod)
+                        
+                        if status == "block":
                             st.error(f"❌ MODIFICATION IMPOSSIBLE : {msg}")
                         else:
                             requests.post(SCRIPT_URL, data=json.dumps({"action":"update","row":int(idx_mod)+2,"date":ed.strftime("%d/%m/%Y"),"equipage":ee.upper(),"horaire":eh,"simu":es}))
