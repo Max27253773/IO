@@ -2,14 +2,8 @@ import streamlit as st
 import pandas as pd
 import requests
 import time
-import re
-import json
-import io
-from datetime import datetime, timedelta
-from PIL import Image, ImageDraw, ImageFont
-
 # ==========================================
-# 1. INITIALISATION DU NETTOYEUR (TOP DU CODE)
+# 1. INITIALISATION DU NETTOYEUR
 # ==========================================
 # Ces lignes empêchent les boutons de confirmation de rester affichés par erreur
 if 'pending_add' not in st.session_state:
@@ -17,6 +11,11 @@ if 'pending_add' not in st.session_state:
 
 if 'pending_mod' not in st.session_state:
     st.session_state['pending_mod'] = None
+import re
+import json
+import io
+from datetime import datetime, timedelta
+from PIL import Image, ImageDraw, ImageFont
 
 # --- CONFIGURATION ---
 st.set_page_config(page_title="⚓ Planning", layout="wide")
