@@ -239,4 +239,4 @@ elif menu == "🔐 Administration":
                     requests.post(SCRIPT_URL, data=json.dumps({"action":"delete","row":int(t)+2}))
                     st.success("🗑️ Supprimé !"), time.sleep(1), st.rerun()
     else:
-        st.error("🔑 Entrez le mot de passe dans la barre lat
+        st.error("🔑 Entrez le mot de passe dans la barre latérale.")
