@@ -158,7 +158,7 @@ if menu == "📅 Planning":
         border_style = f"border-right:4px solid {current_color};" if is_pile else "border-right:1px solid #CCC;"
         row_cols[0].markdown(f"<div class='time-label-cell' style='{border_style}'>{q}</div>", unsafe_allow_html=True)
         
-        # Colonnes Jours
+       # Colonnes Jours
         for i, d in enumerate(jours_a_afficher):
             with row_cols[i+1]:
                 resas = df_view[df_view['Date_DT'].dt.date == d.date()]
@@ -166,13 +166,18 @@ if menu == "📅 Planning":
                 for _, r in resas.iterrows():
                     h_deb, h_fin = extraire_heures(r['Horaire'])
                     if h_deb == h_act:
-                        # Calcul strict
+                        # Calcul de hauteur précis
                         hauteur_px = int((h_fin - h_deb) * 2 * 45) - 2
                         html_bloc += f'<div class="calendar-cell-unique" style="background-color:{current_color}; height:{hauteur_px}px;">{r["Equipage"]}</div>'
                 
                 grid_class = 'grid-line-hour' if is_pile else 'grid-line-min'
-                # Le st.markdown ci-dessous crée la structure de la grille
-                st.markdown(f"<div class='slot-container'><div class='{grid_class}'></div>{html_bloc}</div>", unsafe_allow_html=True)
+                # L'ajout de &nbsp; (espace insécable) force Streamlit à ne pas "tasser" la ligne
+                st.markdown(f"""
+                    <div class='slot-container'>
+                        <div class='{grid_class}'>&nbsp;</div>
+                        {html_bloc}
+                    </div>
+                """, unsafe_allow_html=True)
 
 # Les sections Statistiques et Administration restent identiques à ton code d'origine
 elif menu == "📊 Statistiques":
