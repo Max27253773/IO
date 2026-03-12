@@ -87,30 +87,22 @@ st.markdown(f"""
     [data-testid="stSidebar"] {{ background-color: #E2E8F0 !important; border-right: 2px solid #000000 !important; }}
     h1 {{ font-size: 1.8rem !important; font-weight: 900 !important; color: #000000 !important; }}
     
-    /* Vue Semaine : Blocs flottants */
+    /* Bloc flottant (commun aux deux vues) */
     .calendar-cell-unique {{ 
-        position: absolute; top: 1px; left: 2px; right: 2px; z-index: 100; 
+        position: absolute; top: 1px; z-index: 100; 
         padding: 0px 4px; border: 2px solid #000000; 
         color: {text_on_color} !important; text-align: center; font-weight: 900; 
         display: flex; align-items: center; justify-content: center; 
         box-shadow: 2px 2px 0px rgba(0,0,0,1);
         box-sizing: border-box;
         line-height: 1.1;
-        font-size: 10px; 
-    }}
-
-    /* Vue Jour : Cellules colorées */
-    .day-cell-filled {{
-        background-color: {current_color} !important;
-        color: {text_on_color} !important;
-        height: 100%; width: 100%;
-        display: flex; align-items: center; justify-content: center;
-        font-weight: 900; font-size: 14px;
-        border-left: 4px solid black; border-right: 4px solid black;
     }}
     
-    .grid-line-hour {{ border-bottom: 2px solid #333333 !important; height: 45px; display: flex; align-items: center; justify-content: center; }}
-    .grid-line-min {{ border-bottom: 1px dashed #777777 !important; height: 45px; display: flex; align-items: center; justify-content: center; }}
+    /* Correction pour mobile pour éviter les sauts de ligne */
+    [data-testid="stVerticalBlock"] {{ gap: 0rem !important; }}
+
+    .grid-line-hour {{ border-bottom: 2px solid #333333 !important; height: 45px; position: relative; }}
+    .grid-line-min {{ border-bottom: 1px dashed #777777 !important; height: 45px; position: relative; }}
     </style>
     """, unsafe_allow_html=True)
 
@@ -139,33 +131,29 @@ if menu == "📅 Planning":
         for i, d in enumerate(jours_a_afficher):
             with row_cols[i+1]:
                 resas = df_view[df_view['Date_DT'].dt.date == d.date()]
-                grid_style = "grid-line-hour" if is_pile else "grid-line-min"
+                html_bloc = ""
                 
-                if mode_vue == "Jour":
-                    content = "&nbsp;"
-                    is_in_slot = False
-                    for _, r in resas.iterrows():
-                        h_deb, h_fin = extraire_heures(r['Horaire'])
-                        if h_deb is not None and h_deb <= h_act < h_fin:
-                            is_in_slot = True
-                            if h_deb == h_act: content = r['Equipage']
-                            break
-                    
-                    if is_in_slot:
-                        st.markdown(f"<div class='{grid_style}' style='background-color:{current_color};'><div class='day-cell-filled'>{content}</div></div>", unsafe_allow_html=True)
-                    else:
-                        st.markdown(f"<div class='{grid_style}'>&nbsp;</div>", unsafe_allow_html=True)
+                for _, r in resas.iterrows():
+                    h_deb, h_fin = extraire_heures(r['Horaire'])
+                    if h_deb == h_act:
+                        hauteur_px = int((h_fin - h_deb) * 2 * 45) - 2
+                        
+                        # AJUSTEMENT LARGEUR : 60% en mode Jour, 95% en mode Semaine
+                        largeur = "60%" if mode_vue == "Jour" else "95%"
+                        # Centrage pour le mode Jour
+                        placement = "left: 20%;" if mode_vue == "Jour" else "left: 2px;"
+                        
+                        html_bloc += f'''
+                            <div class="calendar-cell-unique" 
+                                 style="background-color:{current_color}; height:{hauteur_px}px; width:{largeur}; {placement} font-size:{'14px' if mode_vue == 'Jour' else '10px'};">
+                                 {r["Equipage"]}
+                            </div>
+                        '''
                 
-                else:
-                    html_bloc = ""
-                    for _, r in resas.iterrows():
-                        h_deb, h_fin = extraire_heures(r['Horaire'])
-                        if h_deb == h_act:
-                            hauteur_px = int((h_fin - h_deb) * 2 * 45) - 2
-                            html_bloc += f'<div class="calendar-cell-unique" style="background-color:{current_color}; height:{hauteur_px}px;">{r["Equipage"]}</div>'
-                    
-                    st.markdown(f"<div style='position:relative; width:100%; height:45px;'><div class='{grid_style}'>&nbsp;</div>{html_bloc}</div>", unsafe_allow_html=True)
+                grid_class = 'grid-line-hour' if is_pile else 'grid-line-min'
+                st.markdown(f"<div class='{grid_class}'>{html_bloc}</div>", unsafe_allow_html=True)
 
+# (Le reste du code Statistiques et Administration reste identique)
 elif menu == "📊 Statistiques":
     st.markdown("<h1>📊 Statistiques</h1>", unsafe_allow_html=True)
     if not df.empty:
@@ -216,3 +204,12 @@ elif menu == "🔐 Administration":
                     es = st.selectbox("Simu", s_list, index=s_list.index(current_s) if current_s in s_list else 0)
                     if st.form_submit_button("Mettre à jour"):
                         requests.post(SCRIPT_URL, data=json.dumps({"action":"update","row":int(idx)+2,"date":ed.strftime("%d/%m/%Y"),"equipage":ee.upper(),"horaire":eh,"simu":es}))
+                        st.success("📝 Modifié !"), time.sleep(1), st.rerun()
+        with tab3:
+            if not df.empty:
+                t = st.selectbox("Ligne à supprimer", df.index, format_func=format_resa)
+                if st.button("❌ Supprimer définitivement", disabled=not st.checkbox("Confirmer la suppression")):
+                    requests.post(SCRIPT_URL, data=json.dumps({"action":"delete","row":int(t)+2}))
+                    st.success("🗑️ Supprimé !"), time.sleep(1), st.rerun()
+    else:
+        st.error("🔑 Entrez le mot de passe dans la barre latérale.")
