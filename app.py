@@ -214,30 +214,36 @@ if menu == "📅 Planning":
         # --- QUICK BOOKING CONDITIONNEL ---
         if is_admin:
             with st.expander("⚡ RÉSERVATION RAPIDE", expanded=False):
-                with st.form("quick_booking"):
-            c1, c2 = st.columns(2)
-            q_eq = c1.text_input("Équipage", placeholder="Nom")
-            q_hr = c2.text_input("Horaire", placeholder="08h00 - 10h00")
+               with st.form("quick_booking"):
+                    c1, c2 = st.columns(2)
+                    q_eq = c1.text_input("Équipage", placeholder="Nom")
+                    q_hr = c2.text_input("Horaire", placeholder="08h00 - 10h00")
             
-            # Case à cocher pour forcer si doublon
-            force_confirm = st.checkbox("Autoriser le doublon (Equipage déjà ailleurs)")
+                    # Case à cocher pour forcer si doublon
+                    force_confirm = st.checkbox("Autoriser le doublon (Equipage déjà ailleurs)")
             
-            if st.form_submit_button("Vérifier et valider"):
-                if q_eq and q_hr:
-                    status, msg = verifier_conflit(df, d, q_hr, simu_sel, q_eq)
+                    if st.form_submit_button("Vérifier et valider"):
+                        if q_eq and q_hr:
+                            # On passe bien les 5 arguments à la fonction
+                            status, msg = verifier_conflit(df, d, q_hr, simu_sel, q_eq)
                     
-                    if status == "block":
-                        st.error(msg)
-                    elif status == "warn" and not force_confirm:
-                        st.warning(msg)
-                        st.info("Cochez la case ci-dessus pour confirmer le doublon.")
-                    else:
-                        # On enregistre (soit c'est OK, soit c'est WARN mais coché)
-                        requests.post(SCRIPT_URL, data=json.dumps({
-                            "action":"add", "date":d.strftime("%d/%m/%Y"),
-                            "equipage":q_eq.upper(), "horaire":q_hr, "simu":simu_sel
-                        }))
-                        st.success("✅ Réservé !"), time.sleep(1), st.rerun()
+                            if status == "block":
+                                st.error(msg)
+                            elif status == "warn" and not force_confirm:
+                                st.warning(msg)
+                                st.info("Cochez la case ci-dessus pour confirmer le doublon.")
+                            else:
+                                # Cas "ok" OU (cas "warn" ET case cochée)
+                                requests.post(SCRIPT_URL, data=json.dumps({
+                                    "action":"add", 
+                                    "date":d.strftime("%d/%m/%Y"),
+                                    "equipage":q_eq.upper(), 
+                                    "horaire":q_hr, 
+                                    "simu":simu_sel
+                                }))
+                                st.success("✅ Réservé !"), time.sleep(1), st.rerun()
+                        else:
+                            st.warning("Veuillez remplir les champs.")
     else:
         # MODE SEMAINE
         cols = st.columns([0.6] + [1]*5)
