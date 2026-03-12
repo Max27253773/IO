@@ -22,7 +22,7 @@ SIMU_CONFIG = {
 
 QUARTS_HEURES = [f"{h:02d}:{m}" for h in range(6, 21) for m in ["00", "30"]]
 
-st.set_page_config(page_title="⚓ Planning Naval", layout="wide")
+st.set_page_config(page_title="⚓ Planning", layout="wide")
 
 # --- LOGIQUE DONNÉES ---
 def extraire_heures(horaire_str):
@@ -159,14 +159,14 @@ elif menu == "📊 Statistiques":
         df['Mois'] = df['Date_DT'].dt.strftime('%m - %B')
         df['Annee'] = df['Date_DT'].dt.year
 
-        st.subheader("📁 Volume par équipage (Mois)")
+        st.subheader("📁 Volume horaire par équipage (Mensuel)")
         mois_dispo = sorted(df['Mois'].unique())
         mois_sel = st.selectbox("Mois", mois_dispo, index=len(mois_dispo)-1)
         stats_equipage = df[df['Mois'] == mois_sel].groupby('Equipage')['Duree_H'].sum().reset_index()
         st.dataframe(stats_equipage.sort_values(by='Duree_H', ascending=False), use_container_width=True, hide_index=True)
 
         st.divider()
-        st.subheader("🖥️ Utilisation Simus (An)")
+        st.subheader("🖥️ Utilisation des simulateurs (Annuel)")
         stats_simu = df[df['Annee'] == annee_sel].groupby('Simu')['Duree_H'].sum().sort_values(ascending=False)
         st.bar_chart(stats_simu)
     else:
