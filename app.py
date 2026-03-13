@@ -8,17 +8,16 @@ import io
 from datetime import datetime, timedelta
 from PIL import Image, ImageDraw, ImageFont
 
-# --- TITRE INTERSTELLAR DANS LA SIDEBAR ---
+# --- TITRE INTERSTELLAR ÉPURÉ ---
 st.sidebar.markdown(
     """
-    <div style="background: linear-gradient(90deg, #FF4B4B 0%, #1C83E1 100%); 
-                padding: 15px; border-radius: 8px; text-align: center; box-shadow: 0px 4px 10px rgba(0,0,0,0.3);">
-        <h1 style="font-size: 18px; color: white; margin: 0; letter-spacing: 2px;">
-            🌌 INTERSTELLAR GATE
-        </h1>
-        <p style="font-size: 10px; color: rgba(255,255,255,0.8); margin: 5px 0 0 0; font-weight: bold;">
-            STATION DE CONTRÔLE
-        </p>
+    <div style="background: linear-gradient(90deg, #002395 0%, #FFFFFF 50%, #ED2939 100%); 
+                padding: 2px; border-radius: 5px;">
+        <div style="background-color: #0E1117; padding: 15px; border-radius: 4px; text-align: center;">
+            <h1 style="font-size: 20px; color: white; margin: 0; letter-spacing: 4px; font-weight: 900;">
+                INTERSTELLAR GATE
+            </h1>
+        </div>
     </div>
     <br>
     """, 
