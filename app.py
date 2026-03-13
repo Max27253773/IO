@@ -37,12 +37,12 @@ st.markdown("""
         border-radius: 5px; 
         text-align: center; 
         font-weight: bold; 
-        font-size: 1.2rem; 
+        font-size: 1rem; 
         margin-bottom: 5px;
         box-shadow: 0px 4px 10px rgba(0,0,0,0.5);
     ">
         ⚠️ ATTENTION : PASSEZ VOTRE TÉLÉPHONE EN "MODE CLAIR"<br>
-        <span style="color: #000000; font-size: 0.5rem;">
+        <span style="color: #000000; font-size: 0.9rem;">
             Le mode sombre rend certains textes et plannings invisibles
         </span>
     </div>
