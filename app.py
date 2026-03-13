@@ -21,6 +21,7 @@ st.sidebar.markdown(
     """, 
     unsafe_allow_html=True
 )
+
 # --- CONFIGURATION ---
 st.set_page_config(page_title="⚓ Planning", layout="wide")
 
