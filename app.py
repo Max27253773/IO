@@ -14,7 +14,7 @@ st.sidebar.markdown(
     <div style="background: linear-gradient(90deg, #0026C7 0%, #FFFFFF 40%, #FFFFFF 60%, #C70000 100%); 
                 padding: 4px; border-radius: 5px; text-align: center; 
                 width: 80%; margin: 0 auto; box-shadow: 0px 2px 5px rgba(0,0,0,0.2);">
-            <h1 style="font-size: 10px; color: white; margin: 0; letter-spacing: 1px; text-transform: uppercase;">
+            <h1 style="font-size: 5px; color: white; margin: 0; letter-spacing: 1px; text-transform: uppercase;">
                 🌌 INTERSTELLAR GATE
             </h1>
         </div>
