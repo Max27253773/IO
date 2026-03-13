@@ -48,6 +48,14 @@ st.markdown("""
     </div>
     """, unsafe_allow_html=True)
 
+import streamlit as st
+import streamlit.components.v1 as components
+
+# --- FONCTION TECHNIQUE POUR LE STOCKAGE LOCAL ---
+def save_locally(key, value):
+    js = f"localStorage.setItem('{key}', '{value}');"
+    components.html(f"<script>{js}</script>", height=0)
+
 # --- CONFIGURATION FIXE ---
 SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1mmPHzEY9p7ohdzvIYvwQOvqmKNa_8VQdZyl4sj1nksw/export?format=csv&gid=0"
 SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxhetuY5QpJEvl-Wv1BMGej5FeW6S3-WDcbS1DwcwUVT-Yt3e8th1XG9pPCcbrwPu5ITw/exec"
@@ -358,11 +366,28 @@ elif menu == "🖥️ Supervision":
 elif menu == "🔍 Rechercher":
     st.markdown("<h1>🔍 Rechercher par Équipage</h1>", unsafe_allow_html=True)
     
-    # Zone de recherche
-    nom_cherche = st.text_input("Entrez le nom de l'équipage (ex: ECOLE)", "").upper()
+    # 1. Gestion du favori au démarrage
+    if 'nom_favori' not in st.session_state:
+        st.session_state.nom_favori = ""
+
+    # 2. Zone de recherche avec bouton favori
+    col_input, col_fav = st.columns([0.8, 0.2])
     
+    with col_input:
+        nom_cherche = st.text_input("Nom de l'équipage :", value=st.session_state.nom_favori).upper()
+    
+    with col_fav:
+        st.write("##") # Calage vertical
+        if st.button("⭐"):
+            if nom_cherche:
+                st.session_state.nom_favori = nom_cherche
+                save_locally("favori_equipage", nom_cherche)
+                st.toast(f"'{nom_cherche}' enregistré !")
+            else:
+                st.error("Saisissez un nom d'abord")
+    
+    # 3. Traitement de la recherche
     if nom_cherche:
-        # Filtrage sur le nom, l'année et la semaine sélectionnée en sidebar
         mask = (
             (df['Equipage'].str.contains(nom_cherche, na=False, case=False)) &
             (df['Date_DT'].dt.isocalendar().week == semaine_sel) &
@@ -373,20 +398,17 @@ elif menu == "🔍 Rechercher":
         if not resultats.empty:
             st.success(f"Nombre de créneau(x) trouvé(s) : {len(resultats)}")
             
-            # Affichage sous forme de "Cartes" pour mobile
             for idx, r in resultats.iterrows():
                 with st.container():
                     col_sim, col_info = st.columns([0.2, 0.8])
                     color = SIMU_CONFIG.get(r['Simu'].strip().upper(), "#333")
                     
-                    # Petit carré de couleur du simulateur
                     col_sim.markdown(f"""
                         <div style="background-color:{color}; height:60px; border-radius:10px; 
                         border:2px solid black; display:flex; align-items:center; justify-content:center;">
                         </div>
                         """, unsafe_allow_html=True)
                     
-                    # Détails de la réservation
                     col_info.markdown(f"""
                         **{r['Date']}** — <span style="color:{color}; font-weight:bold;">{r['Simu']}</span><br>
                         ⌚ **{r['Horaire']}**
@@ -395,7 +417,7 @@ elif menu == "🔍 Rechercher":
         else:
             st.warning(f"Aucune réservation trouvée pour '{nom_cherche}' en semaine {semaine_sel}.")
     else:
-        st.info("Saisissez un nom pour voir votre planning de la semaine.")
+        st.info("Saisissez un nom ou cliquez sur votre favori pour voir votre planning.")
 
 elif menu == "📊 Statistiques":
     st.markdown("<h1>📊 Statistiques</h1>", unsafe_allow_html=True)
