@@ -27,24 +27,18 @@ st.sidebar.markdown(
 # --- CONFIGURATION ---
 st.set_page_config(page_title="⚓ Planning", layout="wide")
 
-import time
-
 # --- BANDEAU D'ALERTE FORCE (VISIBLE EN MODE SOMBRE) ---
-# On crée un conteneur vide
-placeholder = st.empty()
-
-# On place ton code HTML à l'intérieur du conteneur
-placeholder.markdown("""
+st.markdown("""
     <div style="
         background-color: #FFFFFF; 
         color: #FF0000; 
-        padding: 15px; 
+        padding: 9px; 
         border: 4px solid #FF0000; 
-        border-radius: 10px; 
+        border-radius: 7px; 
         text-align: center; 
         font-weight: bold; 
         font-size: 1.2rem; 
-        margin-bottom: 20px;
+        margin-bottom: 10px;
         box-shadow: 0px 4px 10px rgba(0,0,0,0.5);
     ">
         ⚠️ ATTENTION : PASSEZ VOTRE TÉLÉPHONE EN "MODE CLAIR"<br>
@@ -53,12 +47,6 @@ placeholder.markdown("""
         </span>
     </div>
     """, unsafe_allow_html=True)
-
-# On attend 5 secondes
-time.sleep(5)
-
-# On vide le conteneur pour faire disparaître le bandeau
-placeholder.empty()
 
 # --- CONFIGURATION FIXE ---
 SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1mmPHzEY9p7ohdzvIYvwQOvqmKNa_8VQdZyl4sj1nksw/export?format=csv&gid=0"
