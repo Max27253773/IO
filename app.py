@@ -12,10 +12,10 @@ from PIL import Image, ImageDraw, ImageFont
 st.sidebar.markdown(
     """
     <div style="background: linear-gradient(90deg, #0026C7 0%, #FFFFFF 40%, #FFFFFF 60%, #C70000 100%); 
-                padding: 1px; border-radius: 3px; text-align: center; 
+                padding: 3px; border-radius: 3px; text-align: center; 
                 width: 50%; margin: 0 auto;">
             <p style="font-size: 9px !important; color: black; margin: 0; letter-spacing: 1px; text-transform: uppercase; font-family: 'Impact';">
-                🌌 EROS
+                🌌 IO
             </p>
         </div>
     </div>
