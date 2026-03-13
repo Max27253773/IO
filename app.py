@@ -390,44 +390,54 @@ elif menu == "🖥️ Supervision":
     st.caption("💡 Astuce : Sur mobile, faites glisser le tableau vers la droite pour voir tous les simulateurs.")
 
 elif menu == "🔍 Rechercher":
-    # --- 1. FONCTIONS JS (ZÉRO INSTALLATION) ---
+    # --- 1. FONCTIONS DE STOCKAGE ---
     def save_locally(value):
-        js = f"<script>localStorage.setItem('favori_equipage', '{value}');</script>"
+        # Enregistre et force l'URL pour que Streamlit le voit
+        js = f"""
+        <script>
+            localStorage.setItem('favori_equipage', '{value}');
+            const url = new URL(window.location.href);
+            url.searchParams.set('fav', '{value}');
+            window.parent.location.href = url.href;
+        </script>
+        """
         components.html(js, height=0)
 
-    # Script qui lit le téléphone et met à jour l'URL si besoin
-    def sync_local_storage():
+    # Script de lecture automatique au démarrage
+    def load_locally_js():
         js = """
         <script>
-            var saved = localStorage.getItem('favori_equipage');
-            var params = new URLSearchParams(window.location.search);
+            const saved = localStorage.getItem('favori_equipage');
+            const params = new URLSearchParams(window.location.search);
             if (saved && params.get('fav') !== saved) {
-                params.set('fav', saved);
-                window.location.search = params.toString();
+                const url = new URL(window.location.href);
+                url.searchParams.set('fav', saved);
+                window.parent.location.href = url.href;
             }
         </script>
         """
         components.html(js, height=0)
 
-    # --- 2. RÉCUPÉRATION AUTOMATIQUE ---
-    sync_local_storage() # Le téléphone parle à l'URL
+    # --- 2. LECTURE DU FAVORI ---
+    load_locally_js() # On lance la lecture JS
     
-    # Python lit l'URL
+    # On récupère ce que le JS a mis dans l'URL
     url_fav = st.query_params.get("fav", "")
     
-    # Si on a trouvé un favori dans l'URL, on l'utilise pour remplir le champ
+    # Initialisation de la session
     if 'nom_favori' not in st.session_state:
-        st.session_state.nom_favori = url_fav
+        st.session_state.nom_favori = url_fav if url_fav else ""
 
     st.markdown("<h1>🔍 Rechercher par Équipage</h1>", unsafe_allow_html=True)
     
-    # --- 3. ZONE DE RECHERCHE ---
+    # --- 3. INTERFACE ---
     col_input, col_fav = st.columns([0.82, 0.18])
     
     with col_input:
+        # Le champ utilise la valeur de l'URL récupérée par le JS
         nom_cherche = st.text_input(
-            "Entrez le nom de l'équipage :", 
-            value=st.session_state.nom_favori, # Se remplit tout seul !
+            "Nom de l'équipage :", 
+            value=st.session_state.nom_favori,
             placeholder="ex: ECOLE"
         ).upper()
     
@@ -435,28 +445,24 @@ elif menu == "🔍 Rechercher":
         st.markdown('<div style="padding-top: 28px;"></div>', unsafe_allow_html=True)
         if st.button("⭐"):
             if nom_cherche:
-                save_locally(nom_cherche)
-                st.session_state.nom_favori = nom_cherche
-                st.success(f"Favori '{nom_cherche}' enregistré !")
-                # On met à jour l'URL immédiatement
-                st.query_params["fav"] = nom_cherche
+                save_locally(nom_cherche) # Sauvegarde dans le téléphone + rafraîchissement
             else:
                 st.error("Vide")
 
-    # --- 4. AFFICHAGE DES RÉSULTATS ---
-    # On utilise soit ce qui est tapé, soit le favori récupéré
-    nom_final = nom_cherche if nom_cherche else st.session_state.nom_favori
+    # --- 4. RÉSULTATS ---
+    # On donne la priorité au texte tapé, sinon au favori
+    recherche_active = nom_cherche if nom_cherche else st.session_state.nom_favori
 
-    if nom_final:
+    if recherche_active:
         mask = (
-            (df['Equipage'].str.contains(nom_final, na=False, case=False)) &
+            (df['Equipage'].str.contains(recherche_active, na=False, case=False)) &
             (df['Date_DT'].dt.isocalendar().week == semaine_sel) &
             (df['Date_DT'].dt.year == annee_sel)
         )
         resultats = df[mask].sort_values(by=['Date_DT', 'Horaire'])
 
         if not resultats.empty:
-            st.success(f"Nombre de créneau(x) trouvé(s) : {len(resultats)}")
+            st.success(f"Planning pour : {recherche_active} ({len(resultats)} créneaux)")
             for idx, r in resultats.iterrows():
                 with st.container():
                     col_sim, col_info = st.columns([0.2, 0.8])
@@ -465,9 +471,7 @@ elif menu == "🔍 Rechercher":
                     col_info.markdown(f"**{r['Date']}** — <span style='color:{color}; font-weight:bold;'>{r['Simu']}</span><br>⌚ **{r['Horaire']}**", unsafe_allow_html=True)
                     st.divider()
         else:
-            st.warning(f"Aucun créneau pour '{nom_final}' cette semaine.")
-    else:
-        st.info("Saisissez un nom et cliquez sur ⭐ pour mémoriser votre équipage sur ce téléphone.")
+            st.warning(f"Aucun créneau pour '{recherche_active}' cette semaine.")
 
 elif menu == "📊 Statistiques":
     st.markdown("<h1>📊 Statistiques</h1>", unsafe_allow_html=True)
