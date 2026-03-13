@@ -12,11 +12,11 @@ from PIL import Image, ImageDraw, ImageFont
 st.sidebar.markdown(
     """
     <div style="background: linear-gradient(90deg, #0026C7 0%, #FFFFFF 40%, #FFFFFF 60%, #C70000 100%); 
-                padding: 2px; border-radius: 4px; text-align: center; 
-                width: 100%; margin: 0 auto; box-shadow: 0px 2px 4px rgba(0,0,0,0.2);">
-            <h1 style="font-size: 0.5px; color: white; margin: 0; letter-spacing: 1px; text-transform: uppercase;">
+                padding: 1px; border-radius: 3px; text-align: center; 
+                width: 80%; margin: 0 auto;">
+            <p style="font-size: 7px !important; color: white; margin: 0; letter-spacing: 1px; text-transform: uppercase; font-family: sans-serif;">
                 🌌 L'INTERSTELLAR
-            </h1>
+            </p>
         </div>
     </div>
     <br>
