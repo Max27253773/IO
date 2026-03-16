@@ -364,7 +364,7 @@ elif menu == "🔍 Rechercher":
     if nom_cherche:
         # Filtrage sur le nom, l'année et la semaine sélectionnée en sidebar
         mask = (
-            (df['Equipage'].str.contains(nom_cherche, na=False, case=False)) &
+            (df['Equipe'].str.contains(nom_cherche, na=False, case=False)) &
             (df['Date_DT'].dt.isocalendar().week == semaine_sel) &
             (df['Date_DT'].dt.year == annee_sel)
         )
