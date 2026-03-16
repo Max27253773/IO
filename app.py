@@ -388,7 +388,7 @@ elif menu == "🔍 Rechercher":
                     
                     # Détails de la réservation
                     col_info.markdown(f"""
-                        **{r['Date']}** — <span style="color:{color}; font-weight:bold;">{r['Simu']}</span><br>
+                        **{r['Date']}** — <span style="color:{color}; font-weight:bold;">{r['Local']}</span><br>
                         ⌚ **{r['Horaire']}**
                         """, unsafe_allow_html=True)
                     st.divider()
