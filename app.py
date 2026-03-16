@@ -51,7 +51,7 @@ def check_auth():
     """, unsafe_allow_html=True)
     
     def validate():
-        # --- MODIFIE TES IDENTIFIANTS ICI ---
+        # --- COMPTE UTILISATEUR ---
         ID_VALIDE = "UT" 
         MDP_VALIDE = "Azerty123*"
         
