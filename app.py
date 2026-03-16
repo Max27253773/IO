@@ -5,7 +5,6 @@ import time
 import re
 import json
 import io
-import streamlit.components.v1 as components
 from datetime import datetime, timedelta
 from PIL import Image, ImageDraw, ImageFont
 
@@ -359,52 +358,11 @@ elif menu == "🖥️ Supervision":
 elif menu == "🔍 Rechercher":
     st.markdown("<h1>🔍 Rechercher par Équipage</h1>", unsafe_allow_html=True)
     
-    # 1. Fonctions de stockage JS
-    def js_save(nom):
-        return f"<script>localStorage.setItem('fav_equipe', '{nom}');</script>"
+    # Zone de recherche
+    nom_cherche = st.text_input("Entrez le nom de l'équipage (ex: ECOLE)", "").upper()
     
-    js_load = """
-    <script>
-        const saved = localStorage.getItem('fav_equipe');
-        if (saved) {
-            const url = new URL(window.location.href);
-            url.searchParams.set('f', saved);
-            window.parent.location.href = url.href;
-        } else {
-            alert("Aucun favori trouvé sur ce téléphone.");
-        }
-    </script>
-    """
-
-    # 2. Récupération du nom depuis l'URL
-    nom_auto = st.query_params.get("f", "")
-    
-    # 3. Zone de recherche
-    col_input, col_fav = st.columns([0.8, 0.2])
-    
-    with col_input:
-        nom_cherche = st.text_input(
-            "Entrez le nom de l'équipage :", 
-            value=nom_auto, 
-            placeholder="ex: ECOLE"
-        ).upper()
-    
-    with col_fav:
-        # Alignement précis de l'étoile
-        st.markdown('<div style="padding-top: 28px;"></div>', unsafe_allow_html=True)
-        if st.button("⭐"):
-            if nom_cherche:
-                components.html(js_save(nom_cherche), height=0)
-                st.toast(f"Favori '{nom_cherche}' enregistré !")
-            else:
-                st.error("!")
-
-    # Bouton pour charger le favori du téléphone
-    if st.button("📂 Charger mon favori"):
-        components.html(js_load, height=0)
-
-    # 4. Traitement et Affichage
     if nom_cherche:
+        # Filtrage sur le nom, l'année et la semaine sélectionnée en sidebar
         mask = (
             (df['Equipage'].str.contains(nom_cherche, na=False, case=False)) &
             (df['Date_DT'].dt.isocalendar().week == semaine_sel) &
@@ -415,17 +373,20 @@ elif menu == "🔍 Rechercher":
         if not resultats.empty:
             st.success(f"Nombre de créneau(x) trouvé(s) : {len(resultats)}")
             
+            # Affichage sous forme de "Cartes" pour mobile
             for idx, r in resultats.iterrows():
                 with st.container():
                     col_sim, col_info = st.columns([0.2, 0.8])
                     color = SIMU_CONFIG.get(r['Simu'].strip().upper(), "#333")
                     
+                    # Petit carré de couleur du simulateur
                     col_sim.markdown(f"""
                         <div style="background-color:{color}; height:60px; border-radius:10px; 
                         border:2px solid black; display:flex; align-items:center; justify-content:center;">
                         </div>
                         """, unsafe_allow_html=True)
                     
+                    # Détails de la réservation
                     col_info.markdown(f"""
                         **{r['Date']}** — <span style="color:{color}; font-weight:bold;">{r['Simu']}</span><br>
                         ⌚ **{r['Horaire']}**
@@ -434,7 +395,7 @@ elif menu == "🔍 Rechercher":
         else:
             st.warning(f"Aucune réservation trouvée pour '{nom_cherche}' en semaine {semaine_sel}.")
     else:
-        st.info("Saisissez un nom ou utilisez 'Charger mon favori'.")
+        st.info("Saisissez un nom pour voir votre planning de la semaine.")
 
 elif menu == "📊 Statistiques":
     st.markdown("<h1>📊 Statistiques</h1>", unsafe_allow_html=True)
