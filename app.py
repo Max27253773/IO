@@ -143,7 +143,7 @@ annee_sel = st.sidebar.selectbox("Année", [2025, 2026, 2027], index=1)
 semaine_sel = st.sidebar.selectbox("Semaine", range(1, 54), index=semaine_actuelle - 1)
 jours_fr_liste = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi"]
 choix_j_global = st.sidebar.selectbox("Jour", jours_fr_liste, index=min(maintenant.weekday(), 4) if annee_sel == maintenant.year else 0)
-local_sel = st.sidebar.selectbox("Simulateur", list(SIMU_CONFIG.keys()))
+local_sel = st.sidebar.selectbox("Simulateur", list(LOCAL_CONFIG.keys()))
 
 st.sidebar.divider()
 st.sidebar.subheader("📱 Options d'affichage")
