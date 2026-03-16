@@ -5,6 +5,7 @@ import time
 import re
 import json
 import io
+import streamlit.components.v1 as components
 from datetime import datetime, timedelta
 from PIL import Image, ImageDraw, ImageFont
 
@@ -358,12 +359,10 @@ elif menu == "🖥️ Supervision":
 elif menu == "🔍 Rechercher":
     st.markdown("<h1>🔍 Rechercher par Équipage</h1>", unsafe_allow_html=True)
     
-    # --- SCRIPTS JS POUR LE STOCKAGE (INVISIBLE) ---
-    # 1. Script pour enregistrer
+    # 1. Fonctions de stockage JS
     def js_save(nom):
         return f"<script>localStorage.setItem('fav_equipe', '{nom}');</script>"
     
-    # 2. Script pour envoyer le favori à l'URL quand on clique sur "Charger"
     js_load = """
     <script>
         const saved = localStorage.getItem('fav_equipe');
@@ -377,10 +376,10 @@ elif menu == "🔍 Rechercher":
     </script>
     """
 
-    # Récupération du nom depuis l'URL (si on vient de cliquer sur Charger)
+    # 2. Récupération du nom depuis l'URL
     nom_auto = st.query_params.get("f", "")
     
-    # --- INTERFACE DE RECHERCHE ---
+    # 3. Zone de recherche
     col_input, col_fav = st.columns([0.8, 0.2])
     
     with col_input:
@@ -391,6 +390,7 @@ elif menu == "🔍 Rechercher":
         ).upper()
     
     with col_fav:
+        # Alignement précis de l'étoile
         st.markdown('<div style="padding-top: 28px;"></div>', unsafe_allow_html=True)
         if st.button("⭐"):
             if nom_cherche:
@@ -399,12 +399,12 @@ elif menu == "🔍 Rechercher":
             else:
                 st.error("!")
 
-    # Nouveau : Bouton de récupération rapide
-    if st.button("📂 Charger mon favori enregistré"):
+    # Bouton pour charger le favori du téléphone
+    if st.button("📂 Charger mon favori"):
         components.html(js_load, height=0)
 
+    # 4. Traitement et Affichage
     if nom_cherche:
-        # Filtrage sur le nom, l'année et la semaine sélectionnée
         mask = (
             (df['Equipage'].str.contains(nom_cherche, na=False, case=False)) &
             (df['Date_DT'].dt.isocalendar().week == semaine_sel) &
@@ -434,7 +434,8 @@ elif menu == "🔍 Rechercher":
         else:
             st.warning(f"Aucune réservation trouvée pour '{nom_cherche}' en semaine {semaine_sel}.")
     else:
-        st.info("Saisissez un nom ou utilisez le bouton 'Charger' pour retrouver votre favori.")
+        st.info("Saisissez un nom ou utilisez 'Charger mon favori'.")
+
 elif menu == "📊 Statistiques":
     st.markdown("<h1>📊 Statistiques</h1>", unsafe_allow_html=True)
     if not df.empty:
