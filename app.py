@@ -357,93 +357,41 @@ elif menu == "🖥️ Supervision":
 
 elif menu == "🔍 Rechercher":
     st.markdown("<h1>🔍 Rechercher par Équipage</h1>", unsafe_allow_html=True)
-
-    # --- LE PONT DE SYNCHRONISATION (V3) ---
-    # Ce script vérifie si un favori existe dans le téléphone MAIS pas dans l'URL.
-    # Si c'est le cas, il redirige la page UNE SEULE FOIS pour injecter le nom.
-    sync_script = """
-    <script>
-        const saved = localStorage.getItem('equipage_pref');
-        const urlParams = new URLSearchParams(window.location.search);
-        const currentFav = urlParams.get('f');
-        
-        // Si on a un favori en mémoire mais pas dans l'URL, on recharge avec le favori
-        if (saved && currentFav !== saved) {
-            urlParams.set('f', saved);
-            window.location.search = urlParams.toString();
-        }
-    </script>
-    """
-    components.html(sync_script, height=0)
-
-    # Récupération du nom injecté par le script ci-dessus
-    nom_sauvegarde = st.query_params.get("f", "")
-
-    # --- INTERFACE DE RECHERCHE ---
-    col_input, col_fav = st.columns([0.82, 0.18])
     
-    with col_input:
-        # Le champ se remplit automatiquement grâce à l'URL
-        nom_cherche = st.text_input(
-            "Entrez le nom de l'équipage :", 
-            value=nom_sauvegarde,
-            placeholder="ex: ECOLE"
-        ).upper()
+    # Zone de recherche
+    nom_cherche = st.text_input("Entrez le nom de l'équipage (ex: ECOLE)", "").upper()
     
-    with col_fav:
-        # Alignement CSS précis pour l'étoile
-        st.markdown('<div style="padding-top: 28px;"></div>', unsafe_allow_html=True)
-        if st.button("⭐"):
-            if nom_cherche:
-                # Script pour enregistrer et rafraîchir immédiatement
-                save_script = f"""
-                <script>
-                    localStorage.setItem('equipage_pref', '{nom_cherche}');
-                    const url = new URL(window.location.href);
-                    url.searchParams.set('f', '{nom_cherche}');
-                    window.location.href = url.href;
-                </script>
-                """
-                components.html(save_script, height=0)
-                st.success("Mémorisé !")
-            else:
-                st.error("!")
-
-    # --- AFFICHAGE DES RÉSULTATS ---
-    # On utilise le nom saisi ou celui du favori automatique
-    nom_final = nom_cherche if nom_cherche else nom_sauvegarde
-
-    if nom_final:
+    if nom_cherche:
+        # Filtrage sur le nom, l'année et la semaine sélectionnée en sidebar
         mask = (
-            (df['Equipage'].str.contains(nom_final, na=False, case=False)) &
+            (df['Equipage'].str.contains(nom_cherche, na=False, case=False)) &
             (df['Date_DT'].dt.isocalendar().week == semaine_sel) &
             (df['Date_DT'].dt.year == annee_sel)
         )
         resultats = df[mask].sort_values(by=['Date_DT', 'Horaire'])
 
         if not resultats.empty:
-            st.success(f"Planning : {nom_final} ({len(resultats)} créneaux)")
+            st.success(f"Nombre de créneau(x) trouvé(s) : {len(resultats)}")
+            
+            # Affichage sous forme de "Cartes" pour mobile
             for idx, r in resultats.iterrows():
                 with st.container():
                     col_sim, col_info = st.columns([0.2, 0.8])
                     color = SIMU_CONFIG.get(r['Simu'].strip().upper(), "#333")
                     
+                    # Petit carré de couleur du simulateur
                     col_sim.markdown(f"""
                         <div style="background-color:{color}; height:60px; border-radius:10px; 
                         border:2px solid black; display:flex; align-items:center; justify-content:center;">
                         </div>
                         """, unsafe_allow_html=True)
                     
+                    # Détails de la réservation
                     col_info.markdown(f"""
                         **{r['Date']}** — <span style="color:{color}; font-weight:bold;">{r['Simu']}</span><br>
                         ⌚ **{r['Horaire']}**
                         """, unsafe_allow_html=True)
                     st.divider()
-        else:
-            st.warning(f"Aucun créneau trouvé pour '{nom_final}'.")
-    else:
-        st.info("Saisissez un nom et cliquez sur ⭐ pour l'enregistrer sur ce téléphone.")
-        
         else:
             st.warning(f"Aucune réservation trouvée pour '{nom_cherche}' en semaine {semaine_sel}.")
     else:
