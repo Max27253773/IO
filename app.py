@@ -484,7 +484,7 @@ elif menu == "🔐 Administration":
                     ed = st.date_input("Date", value=df.loc[idx_mod,'Date_DT'])
                     ee = st.text_input("Equipe", df.loc[idx_mod,'Equipe'])
                     eh = st.text_input("Horaire", df.loc[idx_mod,'Horaire'])
-                    es = st.selectbox("Local", list(SIMU_CONFIG.keys()), index=list(LOCAL_CONFIG.keys()).index(str(df.loc[idx_mod,'Local']).strip().upper()))
+                    es = st.selectbox("Local", list(LOCAL_CONFIG.keys()), index=list(LOCAL_CONFIG.keys()).index(str(df.loc[idx_mod,'Local']).strip().upper()))
                     if st.form_submit_button("Vérifier et Enregistrer"):
                         status, msg = verifier_conflit(df, ed, eh, es, ee, exclude_idx=idx_mod)
                         
