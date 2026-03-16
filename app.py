@@ -332,7 +332,7 @@ elif menu == "🖥️ Supervision":
             nom_eq = ""
             
             # On cherche les résas de ce local
-            resas_local = df_jour[df_jour['Simu'].str.strip().str.upper() == s.upper()]
+            resas_local = df_jour[df_jour['Local'].str.strip().str.upper() == s.upper()]
             for _, r in resas_local.iterrows():
                 h_deb, h_fin = extraire_heures(r['Horaire'])
                 if h_deb is not None and h_deb <= h_val < h_fin:
