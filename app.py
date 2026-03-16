@@ -25,7 +25,7 @@ st.sidebar.markdown(
 )
 
 # --- CONFIGURATION ---
-st.set_page_config(page_title="⚓ Planning", layout="wide")
+st.set_page_config(page_title="Planning", layout="wide")
 
 # --- BANDEAU D'ALERTE FORCE (VISIBLE EN MODE SOMBRE) ---
 st.markdown("""
@@ -53,7 +53,7 @@ SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1mmPHzEY9p7ohdzvIYvwQOvq
 SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxhetuY5QpJEvl-Wv1BMGej5FeW6S3-WDcbS1DwcwUVT-Yt3e8th1XG9pPCcbrwPu5ITw/exec"
 ADMIN_PASSWORD = "1234" 
 
-SIMU_CONFIG = {
+LOCAL_CONFIG = {
     "JUPITER": "#1976D2", "MINERVE": "#C2185B", "JUNON": "#757575",
     "BACCHUS": "#388E3C", "MARS": "#D32F2F", "SATURNE": "#E65100",
     "CRONOS": "#A1887F", "NEKKAR": "#C5A000", "PHOBOS": "#DAA520",
@@ -63,7 +63,7 @@ SIMU_CONFIG = {
 # Liste arrêtée à 20:00 pile pour supprimer la ligne 20:30
 QUARTS_HEURES = [f"{h:02d}:{m}" for h in range(6, 20) for m in ["00", "30"]] + ["20:00"]
 
-st.set_page_config(page_title="⚓ Planning", layout="wide")
+st.set_page_config(page_title="Planning", layout="wide")
 
 # --- LOGIQUE DONNÉES ---
 def extraire_heures(horaire_str):
@@ -83,30 +83,30 @@ def formater_heure_propre(texte):
     # C'est une sécurité bonus pour ton Google Sheets
     return texte
 
-def verifier_conflit(df, date_test, horaire_test, simu_test, equipage_test, exclude_idx=None):
+def verifier_conflit(df, date_test, horaire_test, local_test, equipe_test, exclude_idx=None):
     h_deb_new, h_fin_new = extraire_heures(horaire_test)
     if h_deb_new is None: return "block", "Format d'heure invalide."
     
     date_test_dt = pd.to_datetime(date_test)
-    eq_test = str(equipage_test).strip().upper()
+    eq_test = str(equipe_test).strip().upper()
     
-    # 1. Vérification SIMULATEUR (Bloquant)
+    # 1. Vérification local (Bloquant)
     match_simu = df[(df['Date_DT'].dt.date == date_test_dt.date()) & 
-                    (df['Simu'].str.strip().str.upper() == simu_test.upper())]
+                    (df['Local'].str.strip().str.upper() == simu_test.upper())]
     for idx, row in match_simu.iterrows():
         if exclude_idx is not None and idx == exclude_idx: continue
         h_deb_ex, h_fin_ex = extraire_heures(row['Horaire'])
         if h_deb_ex is not None and max(h_deb_new, h_deb_ex) < min(h_fin_new, h_fin_ex):
-            return "block", f"ALERTE : Le simulateur {simu_test} est déjà pris par {row['Equipage']}."
+            return "block", f"ALERTE : Le local {local_test} est déjà pris par {row['Equipe']}."
 
-    # 2. Vérification ÉQUIPAGE (Doublon autorisé avec confirmation)
+    # 2. Vérification ÉQUIPE (Doublon autorisé avec confirmation)
     match_eq = df[(df['Date_DT'].dt.date == date_test_dt.date()) & 
-                  (df['Equipage'].str.strip().str.upper() == eq_test)]
+                  (df['Equipe'].str.strip().str.upper() == eq_test)]
     for idx, row in match_eq.iterrows():
         if exclude_idx is not None and idx == exclude_idx: continue
         h_deb_ex, h_fin_ex = extraire_heures(row['Horaire'])
         if h_deb_ex is not None and max(h_deb_new, h_deb_ex) < min(h_fin_new, h_fin_ex):
-            return "warn", f"DOUBLON : L'équipage {eq_test} est déjà sur {row['Simu']} à cette heure."
+            return "warn", f"DOUBLON : L'équipe {eq_test} est déjà sur {row['Simu']} à cette heure."
 
     return "ok", ""
 
@@ -143,7 +143,7 @@ annee_sel = st.sidebar.selectbox("Année", [2025, 2026, 2027], index=1)
 semaine_sel = st.sidebar.selectbox("Semaine", range(1, 54), index=semaine_actuelle - 1)
 jours_fr_liste = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi"]
 choix_j_global = st.sidebar.selectbox("Jour", jours_fr_liste, index=min(maintenant.weekday(), 4) if annee_sel == maintenant.year else 0)
-simu_sel = st.sidebar.selectbox("Simulateur", list(SIMU_CONFIG.keys()))
+local_sel = st.sidebar.selectbox("Simulateur", list(SIMU_CONFIG.keys()))
 
 st.sidebar.divider()
 st.sidebar.subheader("📱 Options d'affichage")
@@ -154,7 +154,7 @@ st.sidebar.divider()
 st.sidebar.markdown(
     """
     <div style='text-align: center; color: #666666; font-size: 0.8rem; padding: 10px;'>
-        © 2026 <b>Maxime JAMAIN</b><br>
+        © 2026 <b>.........</b><br>
         Tous droits réservés<br>
         <span style='font-size: 0.7rem;'>Version Bêta - Planning </span>
     </div>
@@ -167,7 +167,7 @@ week_days = [monday + timedelta(days=i) for i in range(5)]
 
 d = week_days[jours_fr_liste.index(choix_j_global)]
 
-current_color = SIMU_CONFIG.get(simu_sel, "#000000")
+current_color = LOCAL_CONFIG.get(local_sel, "#000000")
 text_on_color = "#000000" if simu_sel in ["PHOBOS", "NEKKAR"] else "#FFFFFF"
 
 # --- CSS COMPLET ---
@@ -205,7 +205,7 @@ st.markdown(f"""
     </style>
     """, unsafe_allow_html=True)
 
-df_view = df[df['Simu'].str.strip().str.upper() == simu_sel.upper()]
+df_view = df[df['Simu'].str.strip().str.upper() == local_sel.upper()]
 
 # --- NAVIGATION ---
 
@@ -231,7 +231,7 @@ if menu == "📅 Planning":
             if h_deb is not None:
                 top_p = int((h_deb - 6) * 90)
                 haut = int((h_f - h_deb) * 90) - 2
-                html_jour += f'<div class="calendar-cell-unique" style="top:{top_p}px; height:{haut}px; left:65px; right:5px; background-color:{current_color}; font-size:14px;">{r["Equipage"]}</div>'
+                html_jour += f'<div class="calendar-cell-unique" style="top:{top_p}px; height:{haut}px; left:65px; right:5px; background-color:{current_color}; font-size:14px;">{r["Equipe"]}</div>'
         st.markdown(html_jour + '</div>', unsafe_allow_html=True)
 
         # --- QUICK BOOKING CONDITIONNEL ---
@@ -239,16 +239,16 @@ if menu == "📅 Planning":
             with st.expander("⚡ RÉSERVATION RAPIDE", expanded=False):
                with st.form("quick_booking"):
                     c1, c2 = st.columns(2)
-                    q_eq = c1.text_input("Équipage", placeholder="Nom")
+                    q_eq = c1.text_input("Équipe", placeholder="Nom")
                     q_hr = c2.text_input("Horaire", placeholder="08h00 - 10h00")
             
                     # Case à cocher pour forcer si doublon
-                    force_confirm = st.checkbox("Autoriser le doublon (Equipage déjà ailleurs)")
+                    force_confirm = st.checkbox("Autoriser le doublon (Equipe déjà ailleurs)")
             
                     if st.form_submit_button("Vérifier et valider"):
                         if q_eq and q_hr:
                             # On passe bien les 5 arguments à la fonction
-                            status, msg = verifier_conflit(df, d, q_hr, simu_sel, q_eq)
+                            status, msg = verifier_conflit(df, d, q_hr, local_sel, q_eq)
                     
                             if status == "block":
                                 st.error(msg)
@@ -260,9 +260,9 @@ if menu == "📅 Planning":
                                 requests.post(SCRIPT_URL, data=json.dumps({
                                     "action":"add", 
                                     "date":d.strftime("%d/%m/%Y"),
-                                    "equipage":q_eq.upper(), 
+                                    "equipe":q_eq.upper(), 
                                     "horaire":q_hr, 
-                                    "simu":simu_sel
+                                    "local":local_sel
                                 }))
                                 st.success("✅ Réservé !"), time.sleep(1), st.rerun()
                         else:
@@ -288,20 +288,20 @@ if menu == "📅 Planning":
                         h_deb, h_fin = extraire_heures(r['Horaire'])
                         if h_deb == h_act:
                             hauteur_px = int((h_fin - h_deb) * 2 * 45) - 2
-                            html_bloc += f'<div class="calendar-cell-unique" style="top:1px; left:2px; right:2px; height:{hauteur_px}px; background-color:{current_color}; font-size:10px;">{r["Equipage"]}</div>'
+                            html_bloc += f'<div class="calendar-cell-unique" style="top:1px; left:2px; right:2px; height:{hauteur_px}px; background-color:{current_color}; font-size:10px;">{r["Equipe"]}</div>'
                     grid_class = 'grid-line-hour' if is_pile else 'grid-line-min'
                     st.markdown(f"<div class='slot-container-week'><div class='{grid_class}'></div>{html_bloc}</div>", unsafe_allow_html=True)
 
 elif menu == "🖥️ Supervision":
-    st.markdown("<h1>🖥️ Vue d'ensemble des Simulateurs</h1>", unsafe_allow_html=True)
+    st.markdown("<h1>🖥️ Vue d'ensemble des Locaux</h1>", unsafe_allow_html=True)
     
     # On utilise choix_j_global (sidebar) et d (calculé plus haut)
-    st.info(f"Visualisation de tous les simulateurs pour le **{choix_j_global} {d.strftime('%d/%m/%Y')}**")
+    st.info(f"Visualisation de tous les locaux pour le **{choix_j_global} {d.strftime('%d/%m/%Y')}**")
 
     # On utilise d pour le filtrage
     df_jour = df[df['Date_DT'].dt.date == d.date()]
 
-    # Création de la grille de données (Heures en lignes, Simus en colonnes)
+    # Création de la grille de données (Heures en lignes, Locaux en colonnes)
     # On crée une liste d'heures (toutes les 30 min)
     heures_sup = [f"{h:02d}:{m}" for h in range(6, 20) for m in ["00", "30"]]
     
@@ -315,8 +315,8 @@ elif menu == "🖥️ Supervision":
     """
     
     # Ajout des colonnes pour chaque simulateur
-    for s in SIMU_CONFIG.keys():
-        color = SIMU_CONFIG[s]
+    for s in LOCAL_CONFIG.keys():
+        color = LOCAL_CONFIG[s]
         html_sup += f'<th style="border: 1px solid #ddd; padding: 8px; background-color: {color}; color: white; text-align: center; min-width: 80px;">{s}</th>'
     
     html_sup += "</tr></thead><tbody>"
@@ -327,21 +327,21 @@ elif menu == "🖥️ Supervision":
         html_sup += f'<tr><td style="border: 1px solid #ddd; padding: 4px; font-weight: bold; position: sticky; left: 0; background: white; z-index: 5; color: black;">{h_str}</td>'
         
         for s in SIMU_CONFIG.keys():
-            # Vérifier si une réservation existe pour ce simu à cette heure
+            # Vérifier si une réservation existe pour ce local à cette heure
             occupe = False
             nom_eq = ""
             
-            # On cherche les résas de ce simulateur
-            resas_simu = df_jour[df_jour['Simu'].str.strip().str.upper() == s.upper()]
-            for _, r in resas_simu.iterrows():
+            # On cherche les résas de ce local
+            resas_local = df_jour[df_jour['Simu'].str.strip().str.upper() == s.upper()]
+            for _, r in resas_local.iterrows():
                 h_deb, h_fin = extraire_heures(r['Horaire'])
                 if h_deb is not None and h_deb <= h_val < h_fin:
                     occupe = True
-                    nom_eq = r['Equipage']
+                    nom_eq = r['Equipe']
                     break
             
             if occupe:
-                color = SIMU_CONFIG[s]
+                color = LOCAL_CONFIG[s]
                 html_sup += f'<td style="border: 1px solid #ddd; padding: 2px; background-color: {color}44; color: black; text-align: center; font-size: 0.6rem; font-weight: bold;">{nom_eq}</td>'
             else:
                 html_sup += '<td style="border: 1px solid #ddd; padding: 2px; background-color: white;"></td>'
@@ -353,13 +353,13 @@ elif menu == "🖥️ Supervision":
     st.markdown(html_sup, unsafe_allow_html=True)
     
     # Petite légende
-    st.caption("💡 Astuce : Sur mobile, faites glisser le tableau vers la droite pour voir tous les simulateurs.")
+    st.caption("💡 Astuce : Sur mobile, faites glisser le tableau vers la droite pour voir tous les locaux.")
 
 elif menu == "🔍 Rechercher":
-    st.markdown("<h1>🔍 Rechercher par Équipage</h1>", unsafe_allow_html=True)
+    st.markdown("<h1>🔍 Rechercher par Équipe</h1>", unsafe_allow_html=True)
     
     # Zone de recherche
-    nom_cherche = st.text_input("Entrez le nom de l'équipage (ex: ECOLE)", "").upper()
+    nom_cherche = st.text_input("Entrez le nom de l'équipe (ex: ECOLE)", "").upper()
     
     if nom_cherche:
         # Filtrage sur le nom, l'année et la semaine sélectionnée en sidebar
@@ -377,9 +377,9 @@ elif menu == "🔍 Rechercher":
             for idx, r in resultats.iterrows():
                 with st.container():
                     col_sim, col_info = st.columns([0.2, 0.8])
-                    color = SIMU_CONFIG.get(r['Simu'].strip().upper(), "#333")
+                    color = LOCAL_CONFIG.get(r['Local'].strip().upper(), "#333")
                     
-                    # Petit carré de couleur du simulateur
+                    # Petit carré de couleur du local
                     col_sim.markdown(f"""
                         <div style="background-color:{color}; height:60px; border-radius:10px; 
                         border:2px solid black; display:flex; align-items:center; justify-content:center;">
@@ -407,16 +407,16 @@ elif menu == "📊 Statistiques":
         df['Mois'] = df['Date_DT'].dt.strftime('%m - %B')
         df['Annee'] = df['Date_DT'].dt.year
 
-        st.subheader("📁 Volume horaire par équipage (Mensuel)")
+        st.subheader("📁 Volume horaire par équipe (Mensuel)")
         mois_dispo = sorted(df['Mois'].unique())
         mois_sel = st.selectbox("Mois", mois_dispo, index=len(mois_dispo)-1)
-        stats_equipage = df[df['Mois'] == mois_sel].groupby('Equipage')['Duree_H'].sum().reset_index()
-        st.dataframe(stats_equipage.sort_values(by='Duree_H', ascending=False), use_container_width=True, hide_index=True)
+        stats_equipe = df[df['Mois'] == mois_sel].groupby('Equipe')['Duree_H'].sum().reset_index()
+        st.dataframe(stats_equipe.sort_values(by='Duree_H', ascending=False), use_container_width=True, hide_index=True)
 
         st.divider()
-        st.subheader("🖥️ Utilisation des simulateurs (Annuel)")
-        stats_simu = df[df['Annee'] == annee_sel].groupby('Simu')['Duree_H'].sum().sort_values(ascending=False)
-        st.bar_chart(stats_simu)
+        st.subheader("🖥️ Utilisation des locaux (Annuel)")
+        stats_simu = df[df['Annee'] == annee_sel].groupby('Local')['Duree_H'].sum().sort_values(ascending=False)
+        st.bar_chart(stats_local)
     else:
         st.warning("Aucune donnée.")
 
@@ -438,23 +438,23 @@ elif menu == "🔐 Administration":
         with tab1:
            with st.form("ajouter_form", clear_on_submit=True):
             d_add = st.date_input("Date", value=datetime.now())
-            eq_add = st.text_input("Equipage", placeholder="Nom")
+            eq_add = st.text_input("Equipe", placeholder="Nom")
             hr_add = st.text_input("Horaire", placeholder="08h00 - 10h00")
-            sm_add = st.selectbox("Simu", list(SIMU_CONFIG.keys()), index=list(SIMU_CONFIG.keys()).index(simu_sel))
+            lc_add = st.selectbox("Local", list(LOCAL_CONFIG.keys()), index=list(LOCAL_CONFIG.keys()).index(local_sel))
             
             # Le bouton principal du formulaire
             if st.form_submit_button("Vérifier et Ajouter"):
                 if eq_add and hr_add:
-                    status, msg = verifier_conflit(df, d_add, hr_add, sm_add, eq_add)
+                    status, msg = verifier_conflit(df, d_add, hr_add, lc_add, eq_add)
                     
                     if status == "block":
                         st.error(f"❌ {msg}")
                     elif status == "warn":
                         st.warning(f"⚠️ {msg}")
                         # On mémorise les infos pour le bouton de confirmation qui est HORS du formulaire
-                        st.session_state['confirm_add_doublon'] = {"date":d_add, "eq":eq_add, "hr":hr_add, "sm":sm_add}
+                        st.session_state['confirm_add_doublon'] = {"date":d_add, "eq":eq_add, "hr":hr_add, "lc":lc_add}
                     else:
-                        requests.post(SCRIPT_URL, data=json.dumps({"action":"add","date":d_add.strftime("%d/%m/%Y"),"equipage":eq_add.upper(),"horaire":hr_add,"simu":sm_add}))
+                        requests.post(SCRIPT_URL, data=json.dumps({"action":"add","date":d_add.strftime("%d/%m/%Y"),"equipe":eq_add.upper(),"horaire":hr_add,"local":lc_add}))
                         st.success("✅ Réservation validée !"), time.sleep(1), st.rerun()
                 else:
                     st.warning("Veuillez remplir tous les champs.")
@@ -467,9 +467,9 @@ elif menu == "🔐 Administration":
                 requests.post(SCRIPT_URL, data=json.dumps({
                     "action":"add",
                     "date":conf['date'].strftime("%d/%m/%Y"),
-                    "equipage":conf['eq'].upper(),
+                    "equipe":conf['eq'].upper(),
                     "horaire":conf['hr'],
-                    "simu":conf['sm']
+                    "local":conf['sm']
                 }))
                 del st.session_state['confirm_add_doublon'] # On nettoie la session
                 st.success("✅ Doublon ajouté !"), time.sleep(1), st.rerun()
@@ -479,12 +479,12 @@ elif menu == "🔐 Administration":
 
         with tab2:
             if not df_filtre_admin.empty:
-                idx_mod = st.selectbox("Sélectionner le créneau", df_filtre_admin.index, format_func=lambda i: f"{df.loc[i,'Date']} | {df.loc[i,'Equipage']} ({df.loc[i,'Horaire']})")
+                idx_mod = st.selectbox("Sélectionner le créneau", df_filtre_admin.index, format_func=lambda i: f"{df.loc[i,'Date']} | {df.loc[i,'Equipe']} ({df.loc[i,'Horaire']})")
                 with st.form("modifier_form"):
                     ed = st.date_input("Date", value=df.loc[idx_mod,'Date_DT'])
-                    ee = st.text_input("Equipage", df.loc[idx_mod,'Equipage'])
+                    ee = st.text_input("Equipe", df.loc[idx_mod,'Equipe'])
                     eh = st.text_input("Horaire", df.loc[idx_mod,'Horaire'])
-                    es = st.selectbox("Simu", list(SIMU_CONFIG.keys()), index=list(SIMU_CONFIG.keys()).index(str(df.loc[idx_mod,'Simu']).strip().upper()))
+                    es = st.selectbox("Local", list(SIMU_CONFIG.keys()), index=list(LOCAL_CONFIG.keys()).index(str(df.loc[idx_mod,'Local']).strip().upper()))
                     if st.form_submit_button("Vérifier et Enregistrer"):
                         status, msg = verifier_conflit(df, ed, eh, es, ee, exclude_idx=idx_mod)
                         
@@ -494,14 +494,14 @@ elif menu == "🔐 Administration":
                             st.warning(f"⚠️ {msg}")
                             st.session_state['confirm_mod_doublon'] = {"row":int(idx_mod)+2, "date":ed, "eq":ee, "hr":eh, "sm":es}
                         else:
-                            requests.post(SCRIPT_URL, data=json.dumps({"action":"update","row":int(idx_mod)+2,"date":ed.strftime("%d/%m/%Y"),"equipage":ee.upper(),"horaire":eh,"simu":es}))
+                            requests.post(SCRIPT_URL, data=json.dumps({"action":"update","row":int(idx_mod)+2,"date":ed.strftime("%d/%m/%Y"),"equipe":ee.upper(),"horaire":eh,"local":es}))
                             st.success("📝 Modification enregistrée !"), time.sleep(1), st.rerun()
 
                 # Bouton de confirmation de modification pour l'admin
                 if st.session_state.get('confirm_mod_doublon'):
                     if st.button("👍 Confirmer la modification en doublon"):
                         conf = st.session_state['confirm_mod_doublon']
-                        requests.post(SCRIPT_URL, data=json.dumps({"action":"update","row":conf['row'],"date":conf['date'].strftime("%d/%m/%Y"),"equipage":conf['eq'].upper(),"horaire":conf['hr'],"simu":conf['sm']}))
+                        requests.post(SCRIPT_URL, data=json.dumps({"action":"update","row":conf['row'],"date":conf['date'].strftime("%d/%m/%Y"),"equipe":conf['eq'].upper(),"horaire":conf['hr'],"local":conf['sm']}))
                         del st.session_state['confirm_mod_doublon']
                         st.success("📝 Modification forcée effectuée !"), time.sleep(1), st.rerun()
             else:
@@ -509,7 +509,7 @@ elif menu == "🔐 Administration":
 
         with tab3:
             if not df_filtre_admin.empty:
-                t_del = st.selectbox("Créneau à supprimer", df_filtre_admin.index, format_func=lambda i: f"{df.loc[i,'Date']} | {df.loc[i,'Equipage']} ({df.loc[i,'Horaire']}) {df.loc[i,'Simu']}")
+                t_del = st.selectbox("Créneau à supprimer", df_filtre_admin.index, format_func=lambda i: f"{df.loc[i,'Date']} | {df.loc[i,'Equipe']} ({df.loc[i,'Horaire']}) {df.loc[i,'Simu']}")
                 if st.button("❌ Supprimer définitivement", disabled=not st.checkbox("Confirmer")):
                     requests.post(SCRIPT_URL, data=json.dumps({"action":"delete","row":int(t_del)+2}))
                     st.success("🗑️ Supprimé !"), time.sleep(1), st.rerun()
