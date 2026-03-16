@@ -326,7 +326,7 @@ elif menu == "🖥️ Supervision":
         h_val = int(h_str.split(':')[0]) + int(h_str.split(':')[1])/60
         html_sup += f'<tr><td style="border: 1px solid #ddd; padding: 4px; font-weight: bold; position: sticky; left: 0; background: white; z-index: 5; color: black;">{h_str}</td>'
         
-        for s in SIMU_CONFIG.keys():
+        for s in LOCAL_CONFIG.keys():
             # Vérifier si une réservation existe pour ce local à cette heure
             occupe = False
             nom_eq = ""
