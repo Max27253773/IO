@@ -211,7 +211,15 @@ def load_data():
 
 # --- INTERFACE ---
 df = load_data()
-menu = st.sidebar.radio("MENU", ["📅 Planning", "🖥️ Supervision", "🔍 Rechercher", "📊 Statistiques", "🔐 Administration"])
+# --- 1. D'abord, on définit la liste de base (Tout à gauche, pas d'espace) ---
+menus_de_base = ["📅 Planning", "🖥️ Supervision", "🔍 Rechercher", "📊 Statistiques"]
+
+# --- 2. Ensuite, on vérifie le rôle pour insérer l'option (Aligné avec le reste) ---
+if st.session_state.get("role") == "Animateur":
+    menus_de_base.insert(1, "🎯 Assignation Responsables")
+
+# --- 3. Enfin, on affiche le menu ---
+menu = st.sidebar.radio("MENU", menus_de_base)
 
 # --- CONNEXION ADMIN GLOBALE ---
 st.sidebar.title("🔐 Accès ADMIN")
