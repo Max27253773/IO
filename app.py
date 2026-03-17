@@ -8,14 +8,6 @@ import io
 from datetime import datetime, timedelta
 from PIL import Image, ImageDraw, ImageFont
 
-Voici le bloc de code complet et stylisé. Il transforme ton formulaire en une interface moderne, centrée, avec un logo plus imposant pour la connexion, tout en gardant ton identité visuelle (bleu/blanc/rouge).
-
-Tu peux remplacer tout ton bloc (sections 1 à 5) par celui-ci :
-
-Python
-import streamlit as st
-import time
-
 # --- 1. CONFIGURATION ---
 st.set_page_config(page_title="IO", layout="wide", initial_sidebar_state="expanded")
 
@@ -25,21 +17,15 @@ if "auth" not in st.session_state:
 
 # --- 3. LOGIQUE VISUELLE DE CONNEXION ---
 if not st.session_state["auth"]:
-    # CSS pour masquer l'interface et centrer le formulaire proprement
     st.markdown("""
         <style>
-        /* Masque la barre latérale et le header au login */
         [data-testid="stSidebar"] { visibility: hidden; transform: translateX(-100%); }
         header { visibility: hidden; }
-        
-        /* Centre le bloc de connexion verticalement et horizontalement */
         .main .block-container {
             padding-top: 8rem !important;
             max-width: 450px !important;
             margin: auto;
         }
-
-        /* Style du cadre de connexion */
         div[data-testid="stForm"] {
             border: 2px solid #000000 !important;
             border-radius: 15px !important;
@@ -47,8 +33,6 @@ if not st.session_state["auth"]:
             background-color: #FDFDFD !important;
             box-shadow: 10px 10px 0px #0026C7 !important;
         }
-
-        /* Personnalisation du bouton */
         button[kind="primaryFormSubmit"] {
             background-color: #0026C7 !important;
             color: white !important;
@@ -60,6 +44,52 @@ if not st.session_state["auth"]:
         </style>
     """, unsafe_allow_html=True)
 
+    st.markdown("""
+        <div style="background: linear-gradient(90deg, #0026C7 0%, #FFFFFF 50%, #C70000 100%); 
+                    padding: 6px; border-radius: 6px; text-align: center; width: 45%; margin: 0 auto 30px auto; border: 2px solid black;">
+            <p style="font-size: 20px; color: black; margin: 0; font-family: 'Impact'; letter-spacing: 3px;">⌬ IO</p>
+        </div>
+    """, unsafe_allow_html=True)
+
+    with st.form("login_form"):
+        st.markdown("<h2 style='text-align: center; color: black; margin-top: 0;'>CONNEXION</h2>", unsafe_allow_html=True)
+        user_input = st.text_input("Identifiant")
+        pw_input = st.text_input("Mot de passe", type="password")
+        submit_auth = st.form_submit_button("ACCÉDER AU PLANNING")
+        
+        if submit_auth:
+            if user_input == "UT" and pw_input == "Azerty123*":
+                st.session_state["auth"] = True
+                st.success("Accès validé...")
+                time.sleep(0.5)
+                st.rerun()
+            else:
+                st.error("Identifiants incorrects")
+    st.stop()
+
+# --- 4. SI CONNECTÉ : DESIGN NORMAL ---
+st.markdown("""
+    <style>
+    .stApp { background-color: #FFFFFF !important; }
+    header { visibility: visible !important; }
+    [data-testid="stSidebar"] { 
+        visibility: visible !important;
+        background-color: #E2E8F0 !important; 
+        border-right: 2px solid #000000 !important; 
+    }
+    .st-emotion-cache-6q9sum.ef3ps4o4 { fill: #0026C7 !important; }
+    </style>
+""", unsafe_allow_html=True)
+
+st.sidebar.markdown("""
+    <div style="background: linear-gradient(90deg, #0026C7 0%, #FFFFFF 40%, #FFFFFF 60%, #C70000 100%); 
+                padding: 3px; border-radius: 3px; text-align: center; width: 50%; margin: 0 auto;">
+        <p style="font-size: 9px !important; color: black; margin: 0; letter-spacing: 1px; text-transform: uppercase; font-family: 'Impact';">
+            ⌬ IO
+        </p>
+    </div>
+    <br>
+""", unsafe_allow_html=True)
     # Logo centré au-dessus du formulaire (Version large pour le Login)
     st.markdown("""
         <div style="background: linear-gradient(90deg, #0026C7 0%, #FFFFFF 50%, #C70000 100%); 
