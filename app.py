@@ -212,29 +212,30 @@ def load_data():
 # --- INTERFACE ---
 df = load_data()
 # --- 1. DÉFINITION DU MENU DE BASE ---
+# Ces options sont visibles par TOUT LE MONDE (UT et ANIM)
 menus_de_base = ["📅 Planning", "🖥️ Supervision", "🔍 Rechercher", "📊 Statistiques"]
 
 # --- 2. LOGIQUE POUR L'ANIMATEUR ---
 if st.session_state.get("role") == "Animateur":
-    # On ajoute l'assignation pour tous les animateurs
+    # On ajoute l'assignation pour l'Animateur
     menus_de_base.insert(1, "🎯 Assignation Responsables")
     
     st.sidebar.divider()
     st.sidebar.subheader("🔐 Zone Sécurisée")
     
-    # On crée le champ pour la clé admin
+    # Champ pour la clé admin (réservé à l'animateur)
     admin_key = st.sidebar.text_input("Clé Admin", type="password")
     
-    # Si la clé est bonne, on ajoute l'onglet Administration
+    # On vérifie la clé pour débloquer l'administration
     if admin_key == ADMIN_PASSWORD:
         menus_de_base.append("🔐 Administration")
         st.sidebar.success("Mode Admin activé")
+    elif admin_key != "":
+        st.sidebar.error("Clé incorrecte")
 
-# --- 3. AFFICHAGE DU MENU RADIO ---
+# --- 3. AFFICHAGE FINAL DU MENU ---
+# Cette ligne crée le menu radio avec les options filtrées plus haut
 menu = st.sidebar.radio("MENU", menus_de_base)
-
-if is_admin:
-    st.sidebar.success("Mode Administrateur Actif")
     
 st.sidebar.divider()
 
