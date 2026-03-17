@@ -211,20 +211,24 @@ def load_data():
 
 # --- INTERFACE ---
 df = load_data()
-# --- 1. D'abord, on définit la liste de base (Tout à gauche, pas d'espace) ---
+# --- 1. DÉFINITION DU MENU DE BASE ---
 menus_de_base = ["📅 Planning", "🖥️ Supervision", "🔍 Rechercher", "📊 Statistiques"]
 
-# --- 2. Ensuite, on vérifie le rôle pour insérer l'option (Aligné avec le reste) ---
+# --- 2. AJOUT DE L'ASSIGNATION (RESERVÉ ANIMATEUR) ---
 if st.session_state.get("role") == "Animateur":
     menus_de_base.insert(1, "🎯 Assignation Responsables")
+    
+    # --- 3. AJOUT DE L'ADMIN (RESERVÉ ANIMATEUR + CLÉ VALIDE) ---
+    st.sidebar.divider()
+    st.sidebar.subheader("🔐 Zone Sécurisée")
+    admin_key = st.sidebar.text_input("Clé Admin", type="password")
+    
+    if admin_key == ADMIN_PASSWORD:
+        menus_de_base.append("🔐 Administration")
+        st.sidebar.success("Mode Admin activé")
 
-# --- 3. Enfin, on affiche le menu ---
+# --- 4. AFFICHAGE DU MENU RADIO ---
 menu = st.sidebar.radio("MENU", menus_de_base)
-
-# --- CONNEXION ADMIN GLOBALE ---
-st.sidebar.title("🔐 Accès ADMIN")
-admin_key = st.sidebar.text_input("Mot de passe", type="password", key="global_pwd")
-is_admin = (admin_key == ADMIN_PASSWORD)
 
 if is_admin:
     st.sidebar.success("Mode Administrateur Actif")
