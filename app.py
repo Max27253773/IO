@@ -32,7 +32,7 @@ if not st.session_state["auth"]:
             border-radius: 15px !important;
             padding: 40px !important;
             background-color: #FFFFFF !important;
-            box-shadow: 10px 10px 0px #0026C7 !important;
+            box-shadow: 10px 10px 0px #000000 !important;
         }
         /* BOUTON "SE CONNECTER" ULTRA VISIBLE */
         button[kind="primaryFormSubmit"] {
