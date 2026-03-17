@@ -62,7 +62,6 @@ if not st.session_state["auth"]:
                 st.rerun()
             else:
                 st.error("Identifiants incorrects")
-    st.info("Veuillez vous identifier pour accéder aux plannings et à la supervision.")
     st.stop() # Arrête le script ici tant qu'on n'est pas connecté
 
 # --- BANDEAU D'ALERTE FORCE (VISIBLE EN MODE SOMBRE) ---
