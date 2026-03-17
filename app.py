@@ -13,17 +13,17 @@ st.set_page_config(page_title="IO", layout="wide", initial_sidebar_state="expand
 
 # --- 2. SYSTÈME D'AUTHENTIFICATION ---
 def check_auth():
-    """Formulaire d'accueil avec Identifiant et Mot de passe"""
+    """Formulaire d'accueil stylisé avec Identifiant et Mot de passe"""
     
-    # Initialisation de l'état
-    if "authenticated" not in st.session_state:
-        st.session_state["authenticated"] = False
-
-    # CSS : On épure le login sans casser la navigation
+    # --- CSS PERSONNALISÉ POUR LA CONNEXION ---
     st.markdown("""
         <style>
+        /* Masquer le menu Streamlit et le header sur la page de login */
         #MainMenu {visibility: hidden;}
+        header {visibility: hidden;}
         footer {visibility: hidden;}
+
+        /* Style du conteneur de login */
         .login-box {
             background-color: #ffffff;
             padding: 2rem;
@@ -33,48 +33,62 @@ def check_auth():
             text-align: center;
             margin-top: 5vh;
         }
+        
+        /* Personnalisation du bouton */
         .stButton>button {
             background-color: #0026C7 !important;
             color: white !important;
             border-radius: 8px !important;
             height: 3em !important;
+            transition: 0.3s !important;
             font-weight: bold !important;
         }
-        /* On s'assure que le bouton de la sidebar reste visible en bleu */
-        .st-emotion-cache-6q9sum.ef3ps4o4 { fill: #0026C7 !important; }
+        .stButton>button:hover {
+            background-color: #C70000 !important;
+            border-color: #C70000 !important;
+        }
         </style>
     """, unsafe_allow_html=True)
 
     def validate():
-        # --- CONFIGURATION DES COMPTES ---
-        creds = {
-            "UT": "Azerty123*",
-            "PISTOLERO": "FULLAUTO" # Ton futur compte spécial
-        }
-        u_input = st.session_state["user_input"].upper()
-        p_input = st.session_state["pass_input"]
+        # --- TES IDENTIFIANTS ---
+        ID_VALIDE = "PILOTE" 
+        MDP_VALIDE = "VOL2026"
         
-        if u_input in creds and creds[u_input] == p_input:
+        if (st.session_state["user_input"].upper() == ID_VALIDE and 
+            st.session_state["pass_input"] == MDP_VALIDE):
             st.session_state["authenticated"] = True
-            st.session_state["role"] = u_input
         else:
             st.session_state["authenticated"] = False
-            st.error("❌ Identifiant ou mot de passe incorrect.")
 
-    if not st.session_state["authenticated"]:
+    if "authenticated" not in st.session_state or not st.session_state["authenticated"]:
+        
+        # Centrage vertical avec des colonnes
         _, col_mid, _ = st.columns([1, 2, 1])
+        
         with col_mid:
+            # Logo ou Titre Stylisé
             st.markdown("""
                 <div class="login-box">
-                    <h1 style='color: #0026C7; font-family: Impact; letter-spacing: 2px;'>⌬ ACCÈS IO</h1>
-                    <p style='color: #666;'>Veuillez vous identifier</p>
+                    <h1 style='color: #0026C7; margin-bottom: 0;'>⌬ ACCÈS PLANNING</h1>
+                    <p style='color: #666; font-size: 0.9em;'>Veuillez entrer vos accès pour continuer</p>
                 </div>
             """, unsafe_allow_html=True)
             
-            with st.container(border=True):
-                st.text_input("Identifiant", key="user_input")
-                st.text_input("Mot de passe", type="password", key="pass_input")
-                st.button("ENTRER", on_click=validate, use_container_width=True)
+            # Formulaire Streamlit
+            with st.container():
+                st.text_input("👤 Identifiant", key="user_input", placeholder="Ex: PILOTE")
+                st.text_input("🔑 Mot de passe", type="password", key="pass_input", placeholder="••••••••")
+                
+                st.markdown("<br>", unsafe_allow_html=True)
+                st.button("SE CONNECTER", on_click=validate, use_container_width=True)
+                
+                if "authenticated" in st.session_state and not st.session_state["authenticated"]:
+                    st.error("Identifiant ou mot de passe incorrect.")
+            
+            # Signature discrète sous le bloc
+            st.markdown("<p style='text-align:center; color:#AAA; font-size:0.7em; margin-top:20px;'>SYSTÈME SÉCURISÉ v2.0</p>", unsafe_allow_html=True)
+            
         return False
     return True
 
