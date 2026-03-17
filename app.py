@@ -213,6 +213,10 @@ def load_data():
 df = load_data()
 menu = st.sidebar.radio("MENU", ["📅 Planning", "🖥️ Supervision", "🔍 Rechercher", "📊 Statistiques", "🔐 Administration"])
 
+# On ajoute l'option spéciale SEULEMENT pour l'Animateur
+if st.session_state.get("role") == "Animateur":
+    menus_de_base.insert(1, "🎯 Assignation Responsables") # Inséré en 2ème position
+
 # --- CONNEXION ADMIN GLOBALE ---
 st.sidebar.title("🔐 Accès ADMIN")
 admin_key = st.sidebar.text_input("Mot de passe", type="password", key="global_pwd")
