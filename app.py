@@ -15,22 +15,18 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- SYSTÈME D'AUTHENTIFICATION UNIQUE ---
 def check_auth():
-    """Formulaire d'accueil stylisé avec gestion du Header"""
-
-    # 1. Vérification initiale de l'état
     if "authenticated" not in st.session_state:
         st.session_state["authenticated"] = False
 
-    # 2. APPLICATION DU CSS SELON L'ÉTAT
+    # --- CSS DE FORCE ---
     if not st.session_state["authenticated"]:
-        # STYLE PAGE DE CONNEXION
         st.markdown("""
             <style>
-            #MainMenu {visibility: hidden;}
-            header {visibility: hidden;} /* Cache le header pour un look pro au login */
-            footer {visibility: hidden;}
+            /* On ne cache plus le header, on le rend transparent au login */
+            header { background: rgba(0,0,0,0) !important; }
+            #MainMenu { visibility: hidden; }
+            footer { visibility: hidden; }
             .stApp { background-color: white; }
             
             .login-box {
@@ -42,51 +38,35 @@ def check_auth():
                 text-align: center;
                 margin-top: 5vh;
             }
-            
-            .stButton>button {
-                background-color: #0026C7 !important;
-                color: white !important;
-                border-radius: 8px !important;
-                height: 3em !important;
-                font-weight: bold !important;
-                width: 100%;
-            }
             </style>
         """, unsafe_allow_html=True)
     else:
-        # STYLE PAGE CONNECTÉE (On réactive le header pour la sidebar)
+        # ICI ON FORCE LA RÉAPPARITION AVEC DES COULEURS CONTRASTÉES
         st.markdown("""
             <style>
-            header { visibility: visible !important; } 
+            header { 
+                visibility: visible !important; 
+                background-color: #f0f2f6 !important; /* Couleur claire pour voir le bouton */
+            }
+            /* Force l'icône de la sidebar à être sombre pour être visible */
+            .st-emotion-cache-15ec60s { color: #0026C7 !important; } 
             </style>
         """, unsafe_allow_html=True)
 
     def validate():
-        ID_VALIDE = "UT" 
-        MDP_VALIDE = "Azerty123*"
-        
-        if (st.session_state["user_input"].upper() == ID_VALIDE and 
-            st.session_state["pass_input"] == MDP_VALIDE):
+        if (st.session_state["user_input"].upper() == "UT" and 
+            st.session_state["pass_input"] == "Azerty123*"):
             st.session_state["authenticated"] = True
         else:
-            st.session_state["authenticated"] = False
             st.error("❌ Identifiant ou mot de passe incorrect.")
 
-    # 3. AFFICHAGE DU FORMULAIRE SI NON CONNECTÉ
     if not st.session_state["authenticated"]:
         _, col_mid, _ = st.columns([1, 2, 1])
         with col_mid:
-            st.markdown("""
-                <div class="login-box">
-                    <h1 style='color: #0026C7; font-family: Impact;'>⌬ ACCÈS IO</h1>
-                    <p style='color: #666;'>Entrez vos identifiants</p>
-                </div>
-            """, unsafe_allow_html=True)
-            
-            with st.container():
-                st.text_input("Identifiant", key="user_input", placeholder="Ex:UTILISATEUR")
-                st.text_input("Mot de passe", type="password", key="pass_input", placeholder="••••••••")
-                st.button("SE CONNECTER", on_click=validate)
+            st.markdown('<div class="login-box"><h1 style="color: #0026C7; font-family: Impact;">⌬ ACCÈS IO</h1></div>', unsafe_allow_html=True)
+            st.text_input("Identifiant", key="user_input")
+            st.text_input("Mot de passe", type="password", key="pass_input")
+            st.button("SE CONNECTER", on_click=validate, use_container_width=True)
         return False
     
     return True
