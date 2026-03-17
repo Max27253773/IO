@@ -52,26 +52,26 @@ if not st.session_state["auth"]:
     """, unsafe_allow_html=True)
 
     with st.form("login_form"):
-        st.markdown("<h2 style='text-align: center; color: black; margin-top: 0;'>CONNEXION</h2>", unsafe_allow_html=True)
+        st.markdown("<h2 style='text-align: center; color: black; margin-top: 0;'>IDENTIFICATION</h2>", unsafe_allow_html=True)
         user_input = st.text_input("Identifiant")
         pw_input = st.text_input("Mot de passe", type="password")
         submit_auth = st.form_submit_button("SE CONNECTER")
         
-         if submit_auth:
-                # Dictionnaire simple des accès (à adapter selon tes besoins)
-                credentials = {
-                    "UT": {"pw": "Azerty123*", "role": "Utilisateur"},
-                    "ANIM": {"pw": "Anim2026*", "role": "Animateur"}
-                }
-                
-                if user_input in credentials and pw_input == credentials[user_input]["pw"]:
-                    st.session_state["auth"] = True
-                    st.session_state["role"] = credentials[user_input]["role"] # On stocke le rôle
-                    st.success(f"Bienvenue, rôle : {st.session_state['role']}")
-                    time.sleep(0.5)
-                    st.rerun()
-                else:
-                    st.error("Identifiants incorrects")
+        if submit_auth:
+            # Dictionnaire des accès avec rôles
+            credentials = {
+                "UT": {"pw": "Azerty123*", "role": "Utilisateur"},
+                "ANIM": {"pw": "Anim2026*", "role": "Animateur"}
+            }
+            
+            if user_input in credentials and pw_input == credentials[user_input]["pw"]:
+                st.session_state["auth"] = True
+                st.session_state["role"] = credentials[user_input]["role"]
+                st.success(f"Bienvenue, rôle : {st.session_state['role']}")
+                time.sleep(0.5)
+                st.rerun()
+            else:
+                st.error("Identifiants incorrects")
     st.stop()
     
 # --- 4. SI CONNECTÉ : DESIGN NORMAL ---
