@@ -9,7 +9,11 @@ from datetime import datetime, timedelta
 from PIL import Image, ImageDraw, ImageFont
 
 # --- CONFIGURATION ---
-st.set_page_config(page_title="IO", layout="wide")
+st.set_page_config(
+    page_title="IO", 
+    layout="wide", 
+    initial_sidebar_state="expanded" # L'autre option est "auto" ou "collapsed"
+)
 
 # --- SYSTÈME D'AUTHENTIFICATION UNIQUE ---
 def check_auth():
@@ -62,9 +66,22 @@ def check_auth():
             st.session_state["authenticated"] = False
             st.error("❌ Identifiant ou mot de passe incorrect.")
 
-    if "authenticated" not in st.session_state or not st.session_state["authenticated"]:
-        st.markdown("<h1 style='text-align:center;'>⌬ ACCÈS IO</h1>", unsafe_allow_html=True)
-        
+   if "authenticated" not in st.session_state or not st.session_state["authenticated"]:
+    st.markdown("""
+        <style>
+        /* On ne cache le header QUE si on n'est pas connecté */
+        header { visibility: hidden; }
+        .stApp { background-color: white; }
+        </style>
+    """, unsafe_allow_html=True)
+    else:
+        st.markdown("""
+            <style>
+            /* Une fois connecté, on s'assure que le bouton de la sidebar est visible */
+            header { visibility: visible !important; }
+            </style>
+        """, unsafe_allow_html=True)
+    
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
             with st.container(border=True):
