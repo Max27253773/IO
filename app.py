@@ -8,9 +8,6 @@ import io
 from datetime import datetime, timedelta
 from PIL import Image, ImageDraw, ImageFont
 
-# --- CONFIGURATION ---
-st.set_page_config(page_title="Planning", layout="wide")
-
 # --- TITRE IO DANS LA SIDEBAR ---
 st.sidebar.markdown(
     """
@@ -18,7 +15,7 @@ st.sidebar.markdown(
                 padding: 3px; border-radius: 3px; text-align: center; 
                 width: 50%; margin: 0 auto;">
             <p style="font-size: 9px !important; color: black; margin: 0; letter-spacing: 1px; text-transform: uppercase; font-family: 'Impact';">
-                ⌬ IO zefzef
+                ⌬ IO
             </p>
         </div>
     </div>
@@ -26,6 +23,9 @@ st.sidebar.markdown(
     """, 
     unsafe_allow_html=True
 )
+
+# --- CONFIGURATION ---
+st.set_page_config(page_title="Planning", layout="wide")
 
 # --- BANDEAU D'ALERTE FORCE (VISIBLE EN MODE SOMBRE) ---
 st.markdown("""
@@ -55,9 +55,9 @@ ADMIN_PASSWORD = "1234"
 
 LOCAL_CONFIG = {
     "JUP": "#1976D2", "MIN": "#C2185B", "JUN": "#757575",
-    "BAC": "#388E3C", "MAR": "#D32F2F", "SAT": "#E65100",
+    "BAC": "#388E3C", "MARS": "#D32F2F", "SAT": "#E65100",
     "CRO": "#A1887F", "NEK": "#C5A000", "PHO": "#DAA520",
-    "PER": "#558B2F", "SAG": "#4A148C"
+    "PERS": "#558B2F", "SAG": "#4A148C"
 }
 
 # Liste arrêtée à 20:00 pile pour supprimer la ligne 20:30
@@ -91,9 +91,9 @@ def verifier_conflit(df, date_test, horaire_test, local_test, equipe_test, exclu
     eq_test = str(equipe_test).strip().upper()
     
     # 1. Vérification local (Bloquant)
-    match_local = df[(df['Date_DT'].dt.date == date_test_dt.date()) & 
+    match_simu = df[(df['Date_DT'].dt.date == date_test_dt.date()) & 
                     (df['Local'].str.strip().str.upper() == local_test.upper())]
-    for idx, row in match_local.iterrows():
+    for idx, row in match_simu.iterrows():
         if exclude_idx is not None and idx == exclude_idx: continue
         h_deb_ex, h_fin_ex = extraire_heures(row['Horaire'])
         if h_deb_ex is not None and max(h_deb_new, h_deb_ex) < min(h_fin_new, h_fin_ex):
@@ -143,7 +143,7 @@ annee_sel = st.sidebar.selectbox("Année", [2025, 2026, 2027], index=1)
 semaine_sel = st.sidebar.selectbox("Semaine", range(1, 54), index=semaine_actuelle - 1)
 jours_fr_liste = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi"]
 choix_j_global = st.sidebar.selectbox("Jour", jours_fr_liste, index=min(maintenant.weekday(), 4) if annee_sel == maintenant.year else 0)
-local_sel = st.sidebar.selectbox("Local", list(LOCAL_CONFIG.keys()))
+local_sel = st.sidebar.selectbox("Simulateur", list(LOCAL_CONFIG.keys()))
 
 st.sidebar.divider()
 st.sidebar.subheader("📱 Options d'affichage")
@@ -517,4 +517,3 @@ elif menu == "🔐 Administration":
         # Message si l'utilisateur n'est pas admin
         st.error("🔒 Accès réservé. Veuillez saisir le mot de passe dans la barre latérale pour accéder à la gestion.")
         st.info("L'administration permet d'ajouter, modifier ou supprimer des créneaux de manière avancée.")
-    
