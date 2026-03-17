@@ -8,8 +8,8 @@ import io
 from datetime import datetime, timedelta
 from PIL import Image, ImageDraw, ImageFont
 
-# --- 1. CONFIGURATION (DOIT ÊTRE EN TOUT PREMIER) ---
-st.set_page_config(page_title="Planning IO", layout="wide", initial_sidebar_state="expanded")
+# --- 1. CONFIGURATION ---
+st.set_page_config(page_title="IO", layout="wide", initial_sidebar_state="expanded")
 
 # --- 2. INITIALISATION DE LA SESSION ---
 if "auth" not in st.session_state:
@@ -48,7 +48,7 @@ st.sidebar.markdown(
 
 # --- 5. LOGIQUE DE CONNEXION ---
 if not st.session_state["auth"]:
-    st.markdown("### 🔐 Accès au Planning IO")
+    st.markdown("### ⌬ Accès IO")
     with st.form("login_form"):
         user_input = st.text_input("Identifiant")
         pw_input = st.text_input("Mot de passe", type="password")
@@ -64,22 +64,6 @@ if not st.session_state["auth"]:
                 st.error("Identifiants incorrects")
     st.info("Veuillez vous identifier pour accéder aux plannings et à la supervision.")
     st.stop() # Arrête le script ici tant qu'on n'est pas connecté
-
-# --- TITRE IO DANS LA SIDEBAR ---
-st.sidebar.markdown(
-    """
-    <div style="background: linear-gradient(90deg, #0026C7 0%, #FFFFFF 40%, #FFFFFF 60%, #C70000 100%); 
-                padding: 3px; border-radius: 3px; text-align: center; 
-                width: 50%; margin: 0 auto;">
-            <p style="font-size: 9px !important; color: black; margin: 0; letter-spacing: 1px; text-transform: uppercase; font-family: 'Impact';">
-                ⌬ IO
-            </p>
-        </div>
-    </div>
-    <br>
-    """, 
-    unsafe_allow_html=True
-)
 
 # --- BANDEAU D'ALERTE FORCE (VISIBLE EN MODE SOMBRE) ---
 st.markdown("""
