@@ -54,10 +54,10 @@ SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxhetuY5QpJEvl-Wv1BMGej5Fe
 ADMIN_PASSWORD = "1234" 
 
 LOCAL_CONFIG = {
-    "JUPITER": "#1976D2", "MINERVE": "#C2185B", "JUNON": "#757575",
-    "BACCHUS": "#388E3C", "MARS": "#D32F2F", "SATURNE": "#E65100",
-    "CRONOS": "#A1887F", "NEKKAR": "#C5A000", "PHOBOS": "#DAA520",
-    "PERSEE": "#558B2F", "SAGITTAIRE": "#4A148C"
+    "JUP": "#1976D2", "MIN": "#C2185B", "JUN": "#757575",
+    "BAC": "#388E3C", "MAR": "#D32F2F", "SAT": "#E65100",
+    "CRO": "#A1887F", "NEK": "#C5A000", "PHO": "#DAA520",
+    "PER": "#558B2F", "SAG": "#4A148C"
 }
 
 # Liste arrêtée à 20:00 pile pour supprimer la ligne 20:30
@@ -91,9 +91,9 @@ def verifier_conflit(df, date_test, horaire_test, local_test, equipe_test, exclu
     eq_test = str(equipe_test).strip().upper()
     
     # 1. Vérification local (Bloquant)
-    match_simu = df[(df['Date_DT'].dt.date == date_test_dt.date()) & 
+    match_local = df[(df['Date_DT'].dt.date == date_test_dt.date()) & 
                     (df['Local'].str.strip().str.upper() == local_test.upper())]
-    for idx, row in match_simu.iterrows():
+    for idx, row in match_local.iterrows():
         if exclude_idx is not None and idx == exclude_idx: continue
         h_deb_ex, h_fin_ex = extraire_heures(row['Horaire'])
         if h_deb_ex is not None and max(h_deb_new, h_deb_ex) < min(h_fin_new, h_fin_ex):
@@ -143,7 +143,7 @@ annee_sel = st.sidebar.selectbox("Année", [2025, 2026, 2027], index=1)
 semaine_sel = st.sidebar.selectbox("Semaine", range(1, 54), index=semaine_actuelle - 1)
 jours_fr_liste = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi"]
 choix_j_global = st.sidebar.selectbox("Jour", jours_fr_liste, index=min(maintenant.weekday(), 4) if annee_sel == maintenant.year else 0)
-local_sel = st.sidebar.selectbox("Simulateur", list(LOCAL_CONFIG.keys()))
+local_sel = st.sidebar.selectbox("Local", list(LOCAL_CONFIG.keys()))
 
 st.sidebar.divider()
 st.sidebar.subheader("📱 Options d'affichage")
