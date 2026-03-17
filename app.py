@@ -611,7 +611,7 @@ elif menu == "🎯 Assignation Responsables":
                                     "action": "update_batch_responsables", 
                                     "data": updates_a_envoyer
                                 }
-                                response = requests.post(URL_DU_SCRIPT, json=payload)
+                                response = requests.post(SCRIPT_URL, json=payload)
                                 
                                 if "Success" in response.text:
                                     st.success(f"✅ Responsables du {jour} mis à jour !")
