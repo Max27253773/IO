@@ -57,7 +57,7 @@ if not st.session_state["auth"]:
         pw_input = st.text_input("Mot de passe", type="password")
         submit_auth = st.form_submit_button("SE CONNECTER")
         
-       if submit_auth:
+           if submit_auth:
             # Dictionnaire des accès
             credentials = {
                 "UT": {"pw": "Azerty123*", "role": "Utilisateur"},
