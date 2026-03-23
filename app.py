@@ -575,6 +575,8 @@ elif menu == "📊 Statistiques":
 
 elif menu == "🎯 Assignation Responsables":
     st.header(f"🎯 Responsables - Semaine {semaine_sel}")
+
+    df_absences = charger_absences()
     
     # Configuration
     tous_les_locaux = sorted(df['Local'].unique())
