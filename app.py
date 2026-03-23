@@ -219,7 +219,8 @@ menus_de_base = ["📅 Planning", "🖥️ Supervision", "🔍 Rechercher", "�
 if st.session_state.get("role") == "Animateur":
     # Insertion des options supplémentaires dans la liste
     menus_de_base.insert(4, "🎯 Assignation Responsables")
-    menus_de_base.insert(5, "🔐 Administration")
+    menus_de_base.insert(5, "📋 Gestion Personnel")
+    menus_de_base.insert(6, "🔐 Administration")
 
     # Affichage du menu principal
     menu = st.sidebar.radio("MENU", menus_de_base)
@@ -598,6 +599,29 @@ elif menu == "🎯 Assignation Responsables":
                                     st.rerun()
                             except Exception as e:
                                 st.error(f"Erreur : {e}")
+
+elif menu == "📋 Gestion Personnel":
+    st.header("📋 Enregistrement des Indisponibilités")
+    
+    with st.form("form_perso"):
+        col1, col2 = st.columns(2)
+        with col1:
+            d = st.date_input("Date")
+            n = st.selectbox("Animateur", ["MAX", "ALEX", "SOPHIE", "LUCAS", "JULIE"])
+        with col2:
+            t = st.selectbox("Motif", ["Réunion", "Absence", "Formation", "Congé"])
+            h = st.text_input("Heure (ex: 10:00)")
+        
+        if st.form_submit_button("Valider l'indisponibilité"):
+            payload = {
+                "action": "add_personnel",
+                "date": str(d),
+                "nom": n,
+                "type": t,
+                "horaire": h
+            }
+            res = requests.post(SCRIPT_URL, json=payload)
+            st.success(f"Inscrit dans l'onglet Personnel !")
 
 elif menu == "🔐 Administration":
     st.markdown("<h1>⚙️ Gestion des Réservations</h1>", unsafe_allow_html=True)
