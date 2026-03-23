@@ -613,26 +613,27 @@ elif menu == "📋 Gestion Personnel":
         st.cache_data.clear()
         st.rerun()
 
-    # --- 1. FORCE LA LECTURE DES COLONNES F-I (Correction ici) ---
-    # On s'assure que le DataFrame a au moins 9 colonnes (A à I)
+    # --- 1. FORCE LA LECTURE DES COLONNES F-I ---
+    # On vérifie le nombre de COLONNES (index 1 de shape)
     while df.shape < 9:
         df[f"Col_Sup_{df.shape}"] = ""
 
     # --- 2. FILTRAGE DES DONNÉES EXISTANTES ---
-    # On identifie les lignes où la colonne F (index 5) contient une info
+    # On crée une copie pour ne pas polluer le planning principal
     df_perso = df.copy()
-    # On convertit en texte et on nettoie les valeurs vides/nulles
+    
+    # On nettoie la colonne F (index 5) pour détecter les vraies données
     df_perso.iloc[:, 5] = df_perso.iloc[:, 5].astype(str).replace(['nan', 'None', '', ' '], pd.NA)
-    df_perso = df_perso.dropna(subset=[df_perso.columns])
+    df_perso_clean = df_perso.dropna(subset=[df_perso.columns])
 
     # --- SECTION VISUALISATION & MODIFICATION ---
     st.subheader("🔍 Indisponibilités Enregistrées")
     
-    if df_perso.empty:
+    if df_perso_clean.empty:
         st.info("ℹ️ Aucune donnée détectée en colonne F. Utilisez le formulaire ci-dessous pour ajouter une entrée.")
     else:
-        for idx, row in df_perso.iterrows():
-            # F=5, G=6, H=7, I=8
+        for idx, row in df_perso_clean.iterrows():
+            # Index : F=5, G=6, H=7, I=8
             f_date = row.iloc
             g_anim = row.iloc
             h_type = row.iloc
@@ -646,6 +647,7 @@ elif menu == "📋 Gestion Personnel":
                     try:
                         d_val = pd.to_datetime(f_date).date()
                     except:
+                        import datetime
                         d_val = datetime.date.today()
                         
                     m_date = c1.date_input("Modifier Date", d_val)
@@ -657,20 +659,20 @@ elif menu == "📋 Gestion Personnel":
                     if b1.form_submit_button("💾 SAUVEGARDER", use_container_width=True):
                         payload = {
                             "action": "update_personnel",
-                            "row": int(idx) + 2, # +2 pour l'entête Sheets
+                            "row": int(idx) + 2, # +2 pour l'entête du Google Sheet
                             "date": str(m_date),
                             "animateur": m_anim,
                             "type": m_type,
                             "horaire": m_hour
                         }
-                        res = requests.post(SCRIPT_URL, json=payload)
+                        requests.post(SCRIPT_URL, json=payload)
                         st.cache_data.clear()
                         st.success("Modifié !")
                         st.rerun()
                     
                     if b2.form_submit_button("🗑️ SUPPRIMER", type="primary", use_container_width=True):
                         payload = {"action": "delete_personnel", "row": int(idx) + 2}
-                        res = requests.post(SCRIPT_URL, json=payload)
+                        requests.post(SCRIPT_URL, json=payload)
                         st.cache_data.clear()
                         st.warning("Supprimé !")
                         st.rerun()
@@ -699,6 +701,7 @@ elif menu == "📋 Gestion Personnel":
                 st.cache_data.clear()
                 st.success("Enregistré !")
                 st.rerun()
+                
 elif menu == "🔐 Administration":
     st.markdown("<h1>⚙️ Gestion des Réservations</h1>", unsafe_allow_html=True)
     
