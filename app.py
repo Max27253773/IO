@@ -220,8 +220,8 @@ menus_de_base = ["📅 Planning", "🖥️ Supervision", "🔍 Rechercher", "�
 if st.session_state.get("role") == "Animateur":
     # Insertion des options supplémentaires dans la liste
     menus_de_base.insert(4, "🎯 Assignation Responsables")
-    menus_de_base.insert(4, "📋 Gestion Personnel")
-    menus_de_base.insert(5, "🔐 Administration")
+    menus_de_base.insert(5, "📋 Gestion Personnel")
+    menus_de_base.insert(6, "🔐 Administration")
 
     # Affichage du menu principal
     menu = st.sidebar.radio("MENU", menus_de_base)
