@@ -608,66 +608,58 @@ elif menu == "🎯 Assignation Responsables":
 elif menu == "📋 Gestion Personnel":
     st.header("📋 Gestion du Personnel (Col F-I)")
 
-    # Bouton pour forcer la mise à jour si le Sheets a changé
-    if st.button("🔄 Actualiser les données"):
+    # Bouton de secours pour forcer la lecture du Sheets
+    if st.button("🔄 Rafraîchir les données"):
         st.cache_data.clear()
         st.rerun()
 
-    # --- 1. SÉCURITÉ : FORCE LE NOMBRE DE COLONNES (Correction de l'erreur) ---
-    # On s'assure que le DataFrame a au moins 9 colonnes (A à I)
-    # df.shape est le nombre de colonnes. C'est ici que l'erreur se trouvait.
-    while df.shape < 9:
-        df[f"Col_Sup_{df.shape}"] = ""
+    # --- SÉCURITÉ : LECTURE ROBUSTE ---
+    # On crée une copie du planning pour travailler sur les colonnes F, G, H, I
+    # Si les colonnes n'existent pas encore dans ton DF, on les crée vide
+    for i in range(5, 9): # Index 5, 6, 7, 8 (Colonnes F, G, H, I)
+        if i >= len(df.columns):
+            df[f"Col_{i}"] = ""
 
-    # --- 2. FILTRAGE DES DONNÉES EXISTANTES ---
+    # On filtre : on ne garde que les lignes où la COLONNE F (index 5) n'est pas vide
+    # On convertit en texte pour éviter les erreurs avec les dates/nombres
     df_perso = df.copy()
-    # Nettoyage de la colonne F (index 5) pour ne garder que les lignes remplies
-    df_perso.iloc[:, 5] = df_perso.iloc[:, 5].astype(str).replace(['nan', 'None', '', ' '], pd.NA)
-    df_clean = df_perso.dropna(subset=[df_perso.columns])
+    mask = df_perso.iloc[:, 5].astype(str).str.strip().replace(['nan', 'None', ''], pd.NA).notna()
+    df_clean = df_perso[mask]
 
-    # --- SECTION VISUALISATION ---
+    # --- AFFICHAGE DES INDISPOS ---
     st.subheader("🔍 Indisponibilités Enregistrées")
     
     if df_clean.empty:
-        st.info("ℹ️ Aucune donnée détectée en colonne F. Ajoutez-en une via le formulaire ci-dessous.")
+        st.info("Aucune donnée détectée dans les colonnes F à I du Google Sheet.")
     else:
         for idx, row in df_clean.iterrows():
-            # F=5, G=6, H=7, I=8
+            # Extraction directe par position
             f_date = row.iloc
             g_anim = row.iloc
             h_type = row.iloc
             i_hour = row.iloc
 
-            with st.expander(f"👤 {g_anim} — 📅 {f_date} ({h_type})"):
-                with st.form(key=f"edit_perso_{idx}"):
+            with st.expander(f"👤 {g_anim} — 📅 {f_date}"):
+                with st.form(key=f"edit_f_i_{idx}"):
                     c1, c2 = st.columns(2)
-                    
-                    try:
-                        d_val = pd.to_datetime(f_date).date()
-                    except:
-                        import datetime
-                        d_val = datetime.date.today()
-                        
-                    m_date = c1.date_input("Modifier Date", d_val)
-                    m_anim = c1.text_input("Modifier Animateur", value=str(g_anim))
-                    m_type = c2.selectbox("Modifier Type", ["Réunion", "Absence", "Formation", "Congé"], index=0)
-                    m_hour = c2.text_input("Modifier Horaire", value=str(i_hour))
+                    m_date = c1.text_input("Date (F)", value=str(f_date))
+                    m_anim = c1.text_input("Animateur (G)", value=str(g_anim))
+                    m_type = c2.selectbox("Type (H)", ["Réunion", "Absence", "Formation", "Congé"], 
+                                         index=0) # Tu peux ajuster l'index si besoin
+                    m_hour = c2.text_input("Horaire (I)", value=str(i_hour))
                     
                     b1, b2 = st.columns(2)
-                    if b1.form_submit_button("💾 SAUVEGARDER", use_container_width=True):
+                    if b1.form_submit_button("💾 SAUVEGARDER"):
                         payload = {
                             "action": "update_personnel",
                             "row": int(idx) + 2,
-                            "date": str(m_date),
-                            "animateur": m_anim,
-                            "type": m_type,
-                            "horaire": m_hour
+                            "date": m_date, "animateur": m_anim, "type": m_type, "horaire": m_hour
                         }
                         requests.post(SCRIPT_URL, json=payload)
                         st.cache_data.clear()
                         st.rerun()
                     
-                    if b2.form_submit_button("🗑️ SUPPRIMER", type="primary", use_container_width=True):
+                    if b2.form_submit_button("🗑️ SUPPRIMER", type="primary"):
                         payload = {"action": "delete_personnel", "row": int(idx) + 2}
                         requests.post(SCRIPT_URL, json=payload)
                         st.cache_data.clear()
@@ -675,16 +667,16 @@ elif menu == "📋 Gestion Personnel":
 
     st.divider()
 
-    # --- SECTION AJOUT ---
+    # --- FORMULAIRE D'AJOUT ---
     st.subheader("➕ Ajouter une indisponibilité")
-    with st.form("form_ajout_f_i"):
+    with st.form("form_add_perso"):
         col1, col2 = st.columns(2)
-        new_date = col1.date_input("Date (Col F)")
-        new_anim = col1.text_input("Animateur (Col G)")
-        new_type = col2.selectbox("Motif (Col H)", ["Réunion", "Absence", "Formation", "Congé"])
-        new_hour = col2.text_input("Heure (Col I)", placeholder="ex: 14h-17h")
+        new_date = col1.date_input("Date")
+        new_anim = col1.text_input("Animateur")
+        new_type = col2.selectbox("Motif", ["Réunion", "Absence", "Formation", "Congé"])
+        new_hour = col2.text_input("Heure", placeholder="ex: 08h-12h")
         
-        if st.form_submit_button("ENREGISTRER DANS LE SHEETS", use_container_width=True):
+        if st.form_submit_button("ENREGISTRER"):
             payload = {
                 "action": "add_personnel",
                 "date": str(new_date),
@@ -695,7 +687,7 @@ elif menu == "📋 Gestion Personnel":
             res = requests.post(SCRIPT_URL, json=payload)
             if "Success" in res.text:
                 st.cache_data.clear()
-                st.success("Enregistré !")
+                st.success("C'est envoyé !")
                 st.rerun()
                 
 elif menu == "🔐 Administration":
