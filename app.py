@@ -615,16 +615,14 @@ elif menu == "📋 Gestion Personnel":
 
     # --- 1. SÉCURITÉ : FORCE LE NOMBRE DE COLONNES (Correction de l'erreur) ---
     # On s'assure que le DataFrame a au moins 9 colonnes (A à I)
-    # df.shape correspond au nombre de COLONNES
+    # df.shape est le nombre de colonnes. C'est ici que l'erreur se trouvait.
     while df.shape < 9:
         df[f"Col_Sup_{df.shape}"] = ""
 
     # --- 2. FILTRAGE DES DONNÉES EXISTANTES ---
-    # On crée une copie et on nettoie la colonne F (index 5)
     df_perso = df.copy()
-    # On transforme les valeurs vides ou 'nan' en vrai vide pour le filtrage
+    # Nettoyage de la colonne F (index 5) pour ne garder que les lignes remplies
     df_perso.iloc[:, 5] = df_perso.iloc[:, 5].astype(str).replace(['nan', 'None', '', ' '], pd.NA)
-    # On ne garde que les lignes où la colonne F est remplie
     df_clean = df_perso.dropna(subset=[df_perso.columns])
 
     # --- SECTION VISUALISATION ---
@@ -634,18 +632,16 @@ elif menu == "📋 Gestion Personnel":
         st.info("ℹ️ Aucune donnée détectée en colonne F. Ajoutez-en une via le formulaire ci-dessous.")
     else:
         for idx, row in df_clean.iterrows():
-            # Extraction : F=5, G=6, H=7, I=8
+            # F=5, G=6, H=7, I=8
             f_date = row.iloc
             g_anim = row.iloc
             h_type = row.iloc
             i_hour = row.iloc
 
-            # Affichage visuel sympa
             with st.expander(f"👤 {g_anim} — 📅 {f_date} ({h_type})"):
                 with st.form(key=f"edit_perso_{idx}"):
                     c1, c2 = st.columns(2)
                     
-                    # Gestion de la date sécurisée
                     try:
                         d_val = pd.to_datetime(f_date).date()
                     except:
@@ -669,14 +665,12 @@ elif menu == "📋 Gestion Personnel":
                         }
                         requests.post(SCRIPT_URL, json=payload)
                         st.cache_data.clear()
-                        st.success("Modifié !")
                         st.rerun()
                     
                     if b2.form_submit_button("🗑️ SUPPRIMER", type="primary", use_container_width=True):
                         payload = {"action": "delete_personnel", "row": int(idx) + 2}
                         requests.post(SCRIPT_URL, json=payload)
                         st.cache_data.clear()
-                        st.warning("Supprimé !")
                         st.rerun()
 
     st.divider()
