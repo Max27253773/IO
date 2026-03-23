@@ -606,20 +606,25 @@ elif menu == "🎯 Assignation Responsables":
                             st.error(f"Erreur de connexion : {e}")
 
 elif menu == "📋 Gestion Personnel":
-    st.header("📋 Gestion du Personnel")
-    
-    # 1. LISTE DES ANIMATEURS (A ajuster selon tes besoins)
+    st.header("📋 Gestion du Personnel (Col F-I)")
+
+    # BOUTON POUR FORCER LA MISE À JOUR
+    if st.button("🔄 Actualiser les données du Sheets"):
+        st.cache_data.clear()
+        st.rerun()
+
+    # --- CONFIGURATION ---
     LISTE_ANIM = ["MAX", "ALEX", "SOPHIE", "LUCAS", "JULIE"]
     TYPES_INDISPO = ["Réunion", "Absence", "Formation", "Congé", "Autre"]
 
-    # --- SECTION A : AJOUTER UNE NOUVELLE INDISPO ---
+    # --- SECTION 1 : AJOUTER ---
     with st.expander("➕ Enregistrer une nouvelle indisponibilité", expanded=False):
         with st.form("form_ajout_perso"):
             c1, c2 = st.columns(2)
-            d_p = c1.date_input("Date")
-            a_p = c1.selectbox("Animateur", LISTE_ANIM)
-            t_p = c2.selectbox("Type", TYPES_INDISPO)
-            h_p = c2.text_input("Horaire", placeholder="ex: 08h00 - 12h00")
+            d_p = c1.date_input("Date (Col F)")
+            a_p = c1.selectbox("Animateur (Col G)", LISTE_ANIM)
+            t_p = c2.selectbox("Type (Col H)", TYPES_INDISPO)
+            h_p = c2.text_input("Horaire (Col I)", placeholder="ex: 08:00 - 12:00")
             
             if st.form_submit_button("VALIDER L'ENREGISTREMENT", use_container_width=True):
                 payload = {
@@ -631,42 +636,39 @@ elif menu == "📋 Gestion Personnel":
                 }
                 res = requests.post(SCRIPT_URL, json=payload)
                 if "Success" in res.text:
+                    st.cache_data.clear() # TRÈS IMPORTANT : on vide le cache ici
                     st.success(f"✅ Ajouté pour {a_p}")
                     st.rerun()
 
     st.divider()
 
-    # --- SECTION B : VISUALISATION & MODIFICATION ---
+    # --- SECTION 2 : VISUALISATION (Lecture Col F-I) ---
     st.subheader("🔍 Indisponibilités Actuelles")
     
-    # On filtre le DataFrame pour ne garder que les lignes ayant une Date en Col F (index 5)
-    # On utilise .iloc pour être sûr de cibler la colonne F quel que soit son nom
-    df_perso = df[df.iloc[:, 5].notna() & (df.iloc[:, 5] != "")].copy()
+    # On filtre pour ne garder que les lignes où la colonne F (index 5) n'est pas vide
+    # On convertit en string pour éviter les erreurs de type
+    df_perso = df[df.iloc[:, 5].astype(str).str.strip() != "nan"].copy()
+    df_perso = df_perso[df_perso.iloc[:, 5].astype(str).str.strip() != ""]
 
     if df_perso.empty:
-        st.info("Aucune indisponibilité dans le Sheets.")
+        st.info("Aucune indisponibilité détectée. Si vous venez d'en ajouter une, cliquez sur 'Actualiser' en haut.")
     else:
-        # Affichage par "Cartes" dépliables
         for idx, row in df_perso.iterrows():
-            # Construction du label de la carte
-            col_f_date = row.iloc
-            col_g_anim = row.iloc
-            col_h_type = row.iloc
-            col_i_hour = row.iloc
+            # Récupération sécurisée par index de colonne
+            val_date = row.iloc
+            val_anim = row.iloc
+            val_type = row.iloc
+            val_hour = row.iloc
 
-            with st.expander(f"👤 {col_g_anim} — 📅 {col_f_date} ({col_h_type})"):
-                with st.form(key=f"edit_f_i_{idx}"):
-                    st.markdown("**Modifier les informations :**")
+            with st.expander(f"👤 {val_anim} — 📅 {val_date} ({val_type})"):
+                with st.form(key=f"edit_perso_{idx}"):
                     cc1, cc2 = st.columns(2)
-                    
-                    # Champs de modification pré-remplis
-                    m_date = cc1.date_input("Date", pd.to_datetime(col_f_date))
-                    m_anim = cc1.selectbox("Animateur", LISTE_ANIM, index=LISTE_ANIM.index(col_g_anim) if col_g_anim in LISTE_ANIM else 0)
-                    m_type = cc2.selectbox("Type", TYPES_INDISPO, index=TYPES_INDISPO.index(col_h_type) if col_h_type in TYPES_INDISPO else 0)
-                    m_hour = cc2.text_input("Horaire", value=str(col_i_hour))
+                    m_date = cc1.date_input("Modifier Date", pd.to_datetime(val_date) if val_date else datetime.date.today())
+                    m_anim = cc1.selectbox("Animateur", LISTE_ANIM, index=LISTE_ANIM.index(val_anim) if val_anim in LISTE_ANIM else 0)
+                    m_type = cc2.selectbox("Type", TYPES_INDISPO, index=TYPES_INDISPO.index(val_type) if val_type in TYPES_INDISPO else 0)
+                    m_hour = cc2.text_input("Horaire", value=str(val_hour))
                     
                     b1, b2 = st.columns(2)
-                    # Bouton Modifier
                     if b1.form_submit_button("💾 SAUVEGARDER", use_container_width=True):
                         payload = {
                             "action": "update_personnel",
@@ -677,14 +679,13 @@ elif menu == "📋 Gestion Personnel":
                             "horaire": m_hour
                         }
                         requests.post(SCRIPT_URL, json=payload)
-                        st.success("Modifié !")
+                        st.cache_data.clear()
                         st.rerun()
                     
-                    # Bouton Supprimer (Effacer F-I)
                     if b2.form_submit_button("🗑️ SUPPRIMER", type="primary", use_container_width=True):
                         payload = {"action": "delete_personnel", "row": int(idx) + 2}
                         requests.post(SCRIPT_URL, json=payload)
-                        st.warning("Supprimé !")
+                        st.cache_data.clear()
                         st.rerun()
 
 elif menu == "🔐 Administration":
