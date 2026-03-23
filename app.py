@@ -533,7 +533,7 @@ elif menu == "📊 Statistiques":
 elif menu == "🎯 Assignation Responsables":
     st.header(f"🎯 Responsables - Semaine {semaine_sel}")
     
-    ANIMATEURS = ["-- Choisir --", "MAX", "ALEX", "SOPHIE", "LUCAS", "JULIE"]
+    ANIMATEURS = ["-- Choisir --", "MAX", "ALEKS", "ALEX", "MAEL", "ELIES", "LISE", "SIMON", "JOSS"]
     
     tous_les_locaux = sorted(df['Local'].unique())
     tous_les_horaires = sorted(df['Horaire'].unique())
