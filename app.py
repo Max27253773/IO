@@ -608,76 +608,95 @@ elif menu == "🎯 Assignation Responsables":
 elif menu == "📋 Gestion Personnel":
     st.header("📋 Gestion du Personnel (Col F-I)")
 
-    if st.button("🔄 Rafraîchir les données"):
+    # 1. BOUTON DE RECHARGEMENT
+    if st.button("🔄 Rafraîchir la liste depuis Google Sheets"):
         st.cache_data.clear()
         st.rerun()
 
+    # 2. AFFICHAGE DES INDISPOS (LECTURE LIGNE PAR LIGNE)
     st.subheader("🔍 Indisponibilités Enregistrées")
     found_data = False
 
+    # On parcourt le tableau 'df' ligne par ligne
     for idx, row in df.iterrows():
-        # On vérifie si la ligne a assez de colonnes
-        if len(row) >= 6:
-            # CORRECTION ICI : Utilisation de row.iloc avec les crochets
-            val_f = str(row.iloc).strip()
+        # Sécurité : on vérifie si la ligne possède au moins 6 colonnes (jusqu'à F)
+        if len(row) > 5:
+            # ON EXTRAIT LES VALEURS (Bien mettre les CROCHETS [ ] après iloc)
+            val_f = str(row.iloc).strip() # Colonne F (Date)
             
+            # Si la colonne F n'est pas vide et n'est pas "nan"
             if val_f != "" and val_f.lower() != "nan":
                 found_data = True
                 
-                # Extraction des valeurs réelles (bien mettre les crochets)
-                g_anim = row.iloc if len(row) > 6 else ""
-                h_type = row.iloc if len(row) > 7 else ""
-                i_hour = row.iloc if len(row) > 8 else ""
+                # Récupération des colonnes G, H, I avec sécurité sur la longueur
+                val_g = str(row.iloc) if len(row) > 6 else ""
+                val_h = str(row.iloc) if len(row) > 7 else ""
+                val_i = str(row.iloc) if len(row) > 8 else ""
 
-                # Affichage dans l'expander
-                with st.expander(f"👤 {g_anim} — 📅 {val_f} ({h_type})"):
-                    with st.form(key=f"form_edit_{idx}"):
+                # Affichage dans une carte dépliable (Expander)
+                # On nettoie l'affichage pour ne plus voir <pandas.core...>
+                with st.expander(f"👤 {val_g} — 📅 {val_f} ({val_h})"):
+                    with st.form(key=f"form_edit_perso_{idx}"):
                         c1, c2 = st.columns(2)
-                        m_date = c1.text_input("Date", value=str(val_f))
-                        m_anim = c1.text_input("Animateur", value=str(g_anim))
-                        m_type = c2.text_input("Motif", value=str(h_type))
-                        m_hour = c2.text_input("Horaire", value=str(i_hour))
+                        m_date = c1.text_input("Modifier Date", value=val_f)
+                        m_anim = c1.text_input("Modifier Animateur", value=val_g)
+                        m_type = c2.text_input("Modifier Motif", value=val_h)
+                        m_hour = c2.text_input("Modifier Horaire", value=val_i)
                         
-                        b1, b2 = st.columns(2)
-                        if b1.form_submit_button("💾 SAUVEGARDER"):
+                        btn_save, btn_del = st.columns(2)
+                        
+                        # LOGIQUE DE MODIFICATION
+                        if btn_save.form_submit_button("💾 SAUVEGARDER"):
                             payload = {
                                 "action": "update_personnel",
-                                "row": int(idx) + 2,
-                                "date": m_date, "animateur": m_anim, "type": m_type, "horaire": m_hour
+                                "row": int(idx) + 2, # +2 pour l'index Sheets
+                                "date": m_date, 
+                                "animateur": m_anim, 
+                                "type": m_type, 
+                                "horaire": m_hour
                             }
                             requests.post(SCRIPT_URL, json=payload)
                             st.cache_data.clear()
+                            st.success("Modifié !")
                             st.rerun()
                         
-                        if b2.form_submit_button("🗑️ SUPPRIMER", type="primary"):
-                            payload = {"action": "delete_personnel", "row": int(idx) + 2}
+                        # LOGIQUE DE SUPPRESSION
+                        if btn_del.form_submit_button("🗑️ SUPPRIMER", type="primary"):
+                            payload = {
+                                "action": "delete_personnel", 
+                                "row": int(idx) + 2
+                            }
                             requests.post(SCRIPT_URL, json=payload)
                             st.cache_data.clear()
+                            st.warning("Supprimé !")
                             st.rerun()
 
     if not found_data:
-        st.info("ℹ️ Aucune indisponibilité détectée.")
+        st.info("ℹ️ Aucune indisponibilité détectée dans les colonnes F à I.")
 
     st.divider()
 
-    # --- FORMULAIRE D'AJOUT ---
+    # 3. FORMULAIRE D'AJOUT (Comme avant)
     st.subheader("➕ Ajouter une indisponibilité")
-    with st.form("form_add_new"):
+    with st.form("form_add_new_perso"):
         col1, col2 = st.columns(2)
-        new_date = col1.date_input("Date")
-        new_anim = col1.text_input("Animateur")
-        new_type = col2.selectbox("Motif", ["Réunion", "Absence", "Formation", "Congé"])
-        new_hour = col2.text_input("Heure", placeholder="ex: 08:00 - 12:00")
+        new_date = col1.date_input("Date (Col F)")
+        new_anim = col1.text_input("Nom Animateur (Col G)")
+        new_type = col2.selectbox("Motif (Col H)", ["Réunion", "Absence", "Formation", "Congé"])
+        new_hour = col2.text_input("Heure (Col I)", placeholder="ex: 14h-17h")
         
-        if st.form_submit_button("ENREGISTRER"):
+        if st.form_submit_button("ENREGISTRER DANS LE SHEETS", use_container_width=True):
             payload = {
                 "action": "add_personnel",
-                "date": str(new_date), "animateur": new_anim, "type": new_type, "horaire": new_hour
+                "date": str(new_date),
+                "animateur": new_anim,
+                "type": new_type,
+                "horaire": new_hour
             }
             res = requests.post(SCRIPT_URL, json=payload)
             if "Success" in res.text:
                 st.cache_data.clear()
-                st.success("Données enregistrées !")
+                st.success("Enregistré avec succès !")
                 st.rerun()
                 
 elif menu == "🔐 Administration":
