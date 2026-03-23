@@ -608,72 +608,66 @@ elif menu == "🎯 Assignation Responsables":
 elif menu == "📋 Gestion Personnel":
     st.header("📋 Gestion du Personnel (Col F-I)")
 
-    if st.button("🔄 Actualiser la liste"):
+    # 1. BOUTON DE RECHARGEMENT
+    if st.button("🔄 Rafraîchir les données"):
         st.cache_data.clear()
         st.rerun()
 
-    # --- ÉTAPE 1 : SÉCURISATION DU TABLEAU ---
-    # On s'assure que le DataFrame a au moins 9 colonnes pour éviter les crashs
-    df_visu = df.copy()
-    nb_cols_actuelles = df_visu.shape
-    if nb_cols_actuelles < 9:
-        for i in range(nb_cols_actuelles, 9):
-            df_visu[f"Colonne_{i}"] = None
-
-    # --- ÉTAPE 2 : FILTRAGE ROBUSTE ---
-    # On regarde la 6ème colonne (index 5 -> Colonne F)
-    # On convertit en texte et on vérifie si c'est vide ou 'nan'
-    def est_rempli(val):
-        v = str(val).strip().lower()
-        return v not in ['nan', 'none', '', 'nat']
-
-    # On crée une liste des index des lignes qui ont une info en Col F
-    indices_valides = [idx for idx, row in df_visu.iterrows() if est_rempli(row.iloc)]
-    df_clean = df_visu.loc[indices_valides]
-
-    # --- ÉTAPE 3 : AFFICHAGE ---
+    # 2. AFFICHAGE DES INDISPOS (LECTURE SÉCURISÉE)
     st.subheader("🔍 Indisponibilités Enregistrées")
     
-    if df_clean.empty:
-        st.info("ℹ️ Aucune indisponibilité trouvée dans les colonnes F-I.")
-    else:
-        for idx, row in df_clean.iterrows():
-            # Accès sécurisé par position : F=5, G=6, H=7, I=8
-            f_date = row.iloc
-            g_anim = row.iloc
-            h_type = row.iloc
-            i_hour = row.iloc
+    # On crée une liste pour stocker ce qu'on trouve
+    found_data = False
 
-            with st.expander(f"👤 {g_anim} — 📅 {f_date}"):
-                with st.form(key=f"edit_f_i_{idx}"):
-                    c1, c2 = st.columns(2)
-                    m_date = c1.text_input("Date (F)", value=str(f_date))
-                    m_anim = c1.text_input("Animateur (G)", value=str(g_anim))
-                    m_type = c2.text_input("Type (H)", value=str(h_type))
-                    m_hour = c2.text_input("Horaire (I)", value=str(i_hour))
-                    
-                    col_b1, col_b2 = st.columns(2)
-                    if col_b1.form_submit_button("💾 SAUVEGARDER"):
-                        payload = {
-                            "action": "update_personnel",
-                            "row": int(idx) + 2,
-                            "date": m_date, "animateur": m_anim, "type": m_type, "horaire": m_hour
-                        }
-                        requests.post(SCRIPT_URL, json=payload)
-                        st.cache_data.clear()
-                        st.rerun()
-                    
-                    if col_b2.form_submit_button("🗑️ SUPPRIMER", type="primary"):
-                        payload = {"action": "delete_personnel", "row": int(idx) + 2}
-                        requests.post(SCRIPT_URL, json=payload)
-                        st.cache_data.clear()
-                        st.rerun()
+    # On parcourt le tableau ligne par ligne
+    # On vérifie manuellement si la ligne a assez de colonnes ET si la Col F (index 5) est remplie
+    for idx, row in df.iterrows():
+        # Sécurité : on vérifie si la ligne possède au moins 6 colonnes (jusqu'à F)
+        if len(row) >= 6:
+            val_f = str(row.iloc).strip()
+            
+            # Si la colonne F n'est pas vide et n'est pas "nan"
+            if val_f != "" and val_f.lower() != "nan":
+                found_data = True
+                
+                # On récupère G, H, I en vérifiant qu'ils existent, sinon texte vide
+                g_anim = row.iloc if len(row) > 6 else ""
+                h_type = row.iloc if len(row) > 7 else ""
+                i_hour = row.iloc if len(row) > 8 else ""
+
+                with st.expander(f"👤 {g_anim} — 📅 {val_f}"):
+                    with st.form(key=f"form_edit_{idx}"):
+                        c1, c2 = st.columns(2)
+                        m_date = c1.text_input("Date", value=str(val_f))
+                        m_anim = c1.text_input("Animateur", value=str(g_anim))
+                        m_type = c2.text_input("Motif", value=str(h_type))
+                        m_hour = c2.text_input("Horaire", value=str(i_hour))
+                        
+                        b1, b2 = st.columns(2)
+                        if b1.form_submit_button("💾 SAUVEGARDER"):
+                            payload = {
+                                "action": "update_personnel",
+                                "row": int(idx) + 2,
+                                "date": m_date, "animateur": m_anim, "type": m_type, "horaire": m_hour
+                            }
+                            requests.post(SCRIPT_URL, json=payload)
+                            st.cache_data.clear()
+                            st.rerun()
+                        
+                        if b2.form_submit_button("🗑️ SUPPRIMER", type="primary"):
+                            payload = {"action": "delete_personnel", "row": int(idx) + 2}
+                            requests.post(SCRIPT_URL, json=payload)
+                            st.cache_data.clear()
+                            st.rerun()
+
+    if not found_data:
+        st.info("ℹ️ Aucune indisponibilité détectée dans les colonnes F à I.")
 
     st.divider()
 
-    # --- SECTION AJOUT ---
+    # 3. FORMULAIRE D'AJOUT
     st.subheader("➕ Ajouter une indisponibilité")
-    with st.form("form_add_perso"):
+    with st.form("form_add_new"):
         col1, col2 = st.columns(2)
         new_date = col1.date_input("Date")
         new_anim = col1.text_input("Animateur")
@@ -688,7 +682,7 @@ elif menu == "📋 Gestion Personnel":
             res = requests.post(SCRIPT_URL, json=payload)
             if "Success" in res.text:
                 st.cache_data.clear()
-                st.success("Données envoyées !")
+                st.success("Données enregistrées !")
                 st.rerun()
                 
 elif menu == "🔐 Administration":
