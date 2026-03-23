@@ -576,20 +576,18 @@ elif menu == "📊 Statistiques":
 elif menu == "🎯 Assignation Responsables":
     st.header(f"🎯 Responsables - Semaine {semaine_sel}")
 
-    df_absences = charger_absences()
+    # --- CHARGEMENT SÉCURISÉ DES ABSENCES ---
+    try:
+        df_absences = charger_absences()
+    except Exception as e:
+        st.error(f"Erreur de chargement des absences : {e}")
+        df_absences = pd.DataFrame(columns=["date", "animateur", "type", "horaire"])
     
     # Configuration
     tous_les_locaux = sorted(df['Local'].unique())
     tous_les_horaires = sorted(df['Horaire'].unique())
     jours_semaine = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi"]
     jours_trad = {"Lundi": 0, "Mardi": 1, "Mercredi": 2, "Jeudi": 3, "Vendredi": 4}
-    
-    # --- ETAPE B (PRÉPARATION) : On récupère les absences ---
-    # Ici, on appelle ta fonction qui lit l'onglet "ABSENCES" du Google Sheets
-    try:
-        df_absences = charger_absences() # Assure-toi que cette fonction est définie en haut de ton code
-    except:
-        df_absences = pd.DataFrame(columns=["date", "animateur", "type", "horaire"])
 
     onglets = st.tabs(jours_semaine)
 
@@ -601,21 +599,22 @@ elif menu == "🎯 Assignation Responsables":
             with st.form(key=f"form_mobile_{jour}"):
                 st.subheader(f"📅 {jour} {date_cible.strftime('%d/%m')}")
                 updates_a_envoyer = []
-                
-                # Stockage pour détecter si un animateur est mis sur 2 locaux en même temps
                 assignations_temp = {}
 
                 for heure in tous_les_horaires:
-                    st.markdown(f"#### 🕒 {heure}")
-                    
-                    # --- ETAPE B (FILTRAGE) : On calcule qui est disponible à CETTE HEURE précise ---
+                    # On calcule les dispos pour CETTE HEURE précise
                     liste_dispo_heure = filtrer_disponibles_precision(date_cible, heure, df_absences)
+                    
+                    # On n'affiche l'heure que s'il y a des réservations
+                    mask_heure = (df['Date_DT'].dt.date == date_cible) & (df['Horaire'] == heure)
+                    if not df[mask_heure].empty:
+                        st.markdown(f"#### 🕒 {heure}")
                     
                     for local in tous_les_locaux:
                         mask = (df['Date_DT'].dt.date == date_cible) & (df['Horaire'] == heure) & (df['Local'] == local)
                         resa = df[mask]
 
-                        # Correction du .iloc pour éviter l'erreur
+                        # --- CORRECTION ICI : resa.iloc au lieu de resa.iloc ---
                         if not resa.empty and resa.iloc['Equipe'] not in ["Libre", "", None]:
                             equipe = resa.iloc['Equipe']
                             current_resp = resa.iloc['Responsable'] if 'Responsable' in resa.columns and pd.notna(resa.iloc['Responsable']) else "-- Choisir --"
@@ -623,8 +622,6 @@ elif menu == "🎯 Assignation Responsables":
                             with st.container():
                                 st.markdown(f"**{local}** — 👥 *{equipe}*")
                                 
-                                # On définit les options du menu : l'animateur actuel doit être dedans même s'il est absent
-                                # pour éviter que le menu plante s'il a déjà été assigné.
                                 options_menu = ["-- Choisir --"] + liste_dispo_heure
                                 if current_resp != "-- Choisir --" and current_resp not in options_menu:
                                     options_menu.append(current_resp)
@@ -642,7 +639,6 @@ elif menu == "🎯 Assignation Responsables":
                                     label_visibility="collapsed"
                                 )
 
-                                # --- LOGIQUE ANTI-CONFLIT (Doublon de local) ---
                                 if resp_nom != "-- Choisir --":
                                     if f"{resp_nom}_{heure}" in assignations_temp:
                                         autre_local = assignations_temp[f"{resp_nom}_{heure}"]
@@ -662,7 +658,7 @@ elif menu == "🎯 Assignation Responsables":
                 
                 if btn_save:
                     if updates_a_envoyer:
-                        with st.spinner("Mise à jour du planning..."):
+                        with st.spinner("Envoi des données..."):
                             try:
                                 payload = {"action": "update_batch_responsables", "data": updates_a_envoyer}
                                 response = requests.post(SCRIPT_URL, json=payload)
@@ -675,71 +671,46 @@ elif menu == "🎯 Assignation Responsables":
 elif menu == "👥 Gestion Personnel":
     st.markdown("<h1 style='text-align: center;'>👥 Gestion du Personnel</h1>", unsafe_allow_html=True)
 
-    # --- 1. FORMULAIRE D'AJOUT D'INDISPONIBILITÉ ---
     st.subheader("➕ Déclarer une indisponibilité")
     with st.form("form_gestion_pers"):
         col1, col2 = st.columns(2)
         with col1:
-            # Ta liste officielle incluant E1
             nom_select = st.selectbox("Personnel concerné", ["MAX", "ALEKS", "ALEX", "MAEL", "ELIES", "LISE", "SIMON", "JOSS", "E1"])
             date_select = st.date_input("Date de l'indisponibilité", min_value=datetime.now().date())
         with col2:
             motif_select = st.selectbox("Motif", ["Sport", "Médecin", "Absence", "Formation", "Repos", "Autre"])
-            # Rappel du format pour que le filtrage automatique fonctionne
-            horaire_select = st.text_input("Créneau précis", placeholder="Ex: 08:00-12:00 ou Journée", help="Format HH:MM-HH:MM ou tapez 'Journée'")
+            horaire_select = st.text_input("Créneau précis", placeholder="Ex: 08:00-12:00 ou Journée")
         
         submit_abs = st.form_submit_button("💾 ENREGISTRER L'INDISPONIBILITÉ", use_container_width=True)
         
         if submit_abs:
-            # On prépare le paquet de données pour Google Sheets
             data_abs = {
-                "action": "add_absence", # Cible l'action dans ton Apps Script
+                "action": "add_absence",
                 "date": str(date_select),
                 "animateur": nom_select,
                 "type": motif_select,
                 "horaire": horaire_select
             }
-            
-            with st.spinner("Envoi au Google Sheets..."):
-                try:
-                    response = requests.post(SCRIPT_URL, json=data_abs)
-                    if "Success" in response.text:
-                        st.success(f"✅ L'indisponibilité de **{nom_select}** a été enregistrée.")
-                        st.rerun() # On recharge pour mettre à jour la liste en bas
-                    else:
-                        st.error(f"Erreur du serveur : {response.text}")
-                except Exception as e:
-                    st.error(f"Erreur de connexion : {e}")
+            try:
+                response = requests.post(SCRIPT_URL, json=data_abs)
+                if "Success" in response.text:
+                    st.success(f"✅ Enregistré !")
+                    st.rerun()
+            except Exception as e:
+                st.error(f"Erreur : {e}")
 
     st.divider()
-
-    # --- 2. AFFICHAGE DES INDISPONIBILITÉS ENREGISTRÉES ---
-    st.subheader("📋 Récapitulatif des absences (Onglet ABSENCES)")
+    st.subheader("📋 Récapitulatif")
     
-    # On utilise la fonction de lecture pour voir le contenu réel du Sheets
-    df_abs_visu = charger_absences() 
-    
-    if df_abs_visu.empty:
-        st.info("Aucune indisponibilité n'est enregistrée pour le moment.")
-    else:
-        # On trie par date pour plus de clarté
-        df_abs_visu = df_abs_visu.sort_values(by="date", ascending=True)
-        
-        # Affichage propre sous forme de tableau
-        st.dataframe(
-            df_abs_visu, 
-            column_config={
-                "date": "Date",
-                "animateur": "Personnel",
-                "type": "Motif",
-                "horaire": "Créneau"
-            },
-            use_container_width=True,
-            hide_index=True
-        )
-
-        # Petit conseil visuel
-        st.caption("💡 Les personnes listées ici seront automatiquement retirées des choix dans le menu 'Assignation Responsables' aux horaires indiqués.")
+    # Affichage sécurisé du tableau
+    try:
+        df_abs_visu = charger_absences()
+        if not df_abs_visu.empty:
+            st.dataframe(df_abs_visu, use_container_width=True, hide_index=True)
+        else:
+            st.info("Aucune indisponibilité enregistrée.")
+    except:
+        st.warning("Impossible de charger la liste des absences pour le moment.")
 
 elif menu == "🔐 Administration":
     st.markdown("<h1>⚙️ Gestion des Réservations</h1>", unsafe_allow_html=True)
