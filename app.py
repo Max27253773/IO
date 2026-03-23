@@ -189,17 +189,12 @@ def filtrer_disponibles_precision(date_cible, heure_creneau, df_absences):
 def charger_absences():
     """Récupère les données de l'onglet ABSENCES du Google Sheets"""
     try:
-        # On appelle l'Apps Script avec l'action 'get_absences'
         response = requests.post(SCRIPT_URL, json={"action": "get_absences"})
         if response.status_code == 200:
-            data_json = response.json()
-            # On transforme le JSON en tableau Pandas
-            df_abs = pd.DataFrame(data_json)
-            return df_abs
+            return pd.DataFrame(response.json())
         else:
             return pd.DataFrame(columns=["date", "animateur", "type", "horaire"])
-    except Exception as e:
-        print(f"Erreur lecture absences: {e}")
+    except:
         return pd.DataFrame(columns=["date", "animateur", "type", "horaire"])
 
 # --- LOGIQUE DONNÉES ---
