@@ -608,34 +608,29 @@ elif menu == "🎯 Assignation Responsables":
 elif menu == "📋 Gestion Personnel":
     st.header("📋 Gestion du Personnel (Col F-I)")
 
-    # 1. BOUTON DE RECHARGEMENT
     if st.button("🔄 Rafraîchir les données"):
         st.cache_data.clear()
         st.rerun()
 
-    # 2. AFFICHAGE DES INDISPOS (LECTURE SÉCURISÉE)
     st.subheader("🔍 Indisponibilités Enregistrées")
-    
-    # On crée une liste pour stocker ce qu'on trouve
     found_data = False
 
-    # On parcourt le tableau ligne par ligne
-    # On vérifie manuellement si la ligne a assez de colonnes ET si la Col F (index 5) est remplie
     for idx, row in df.iterrows():
-        # Sécurité : on vérifie si la ligne possède au moins 6 colonnes (jusqu'à F)
+        # On vérifie si la ligne a assez de colonnes
         if len(row) >= 6:
+            # CORRECTION ICI : Utilisation de row.iloc avec les crochets
             val_f = str(row.iloc).strip()
             
-            # Si la colonne F n'est pas vide et n'est pas "nan"
             if val_f != "" and val_f.lower() != "nan":
                 found_data = True
                 
-                # On récupère G, H, I en vérifiant qu'ils existent, sinon texte vide
+                # Extraction des valeurs réelles (bien mettre les crochets)
                 g_anim = row.iloc if len(row) > 6 else ""
                 h_type = row.iloc if len(row) > 7 else ""
                 i_hour = row.iloc if len(row) > 8 else ""
 
-                with st.expander(f"👤 {g_anim} — 📅 {val_f}"):
+                # Affichage dans l'expander
+                with st.expander(f"👤 {g_anim} — 📅 {val_f} ({h_type})"):
                     with st.form(key=f"form_edit_{idx}"):
                         c1, c2 = st.columns(2)
                         m_date = c1.text_input("Date", value=str(val_f))
@@ -661,11 +656,11 @@ elif menu == "📋 Gestion Personnel":
                             st.rerun()
 
     if not found_data:
-        st.info("ℹ️ Aucune indisponibilité détectée dans les colonnes F à I.")
+        st.info("ℹ️ Aucune indisponibilité détectée.")
 
     st.divider()
 
-    # 3. FORMULAIRE D'AJOUT
+    # --- FORMULAIRE D'AJOUT ---
     st.subheader("➕ Ajouter une indisponibilité")
     with st.form("form_add_new"):
         col1, col2 = st.columns(2)
