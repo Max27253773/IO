@@ -138,7 +138,6 @@ st.markdown("""
     </div>
     """, unsafe_allow_html=True)
 
-
 # --- CONFIGURATION FIXE ---
 SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1mmPHzEY9p7ohdzvIYvwQOvqmKNa_8VQdZyl4sj1nksw/export?format=csv&gid=0"
 SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxhetuY5QpJEvl-Wv1BMGej5FeW6S3-WDcbS1DwcwUVT-Yt3e8th1XG9pPCcbrwPu5ITw/exec"
@@ -220,8 +219,7 @@ menus_de_base = ["📅 Planning", "🖥️ Supervision", "🔍 Rechercher", "�
 if st.session_state.get("role") == "Animateur":
     # Insertion des options supplémentaires dans la liste
     menus_de_base.insert(4, "🎯 Assignation Responsables")
-    menus_de_base.insert(5, "📋 Gestion Personnel")
-    menus_de_base.insert(6, "🔐 Administration")
+    menus_de_base.insert(5, "🔐 Administration")
 
     # Affichage du menu principal
     menu = st.sidebar.radio("MENU", menus_de_base)
@@ -535,15 +533,13 @@ elif menu == "📊 Statistiques":
 elif menu == "🎯 Assignation Responsables":
     st.header(f"🎯 Responsables - Semaine {semaine_sel}")
     
-    # --- CONFIGURATION ---
-    # Liste de tes animateurs pour le menu déroulant
-    ANIMATEURS_LISTE = ["MAX", "ALEX", "SOPHIE", "LUCAS", "JULIE"]
-    
+    # Configuration
     tous_les_locaux = sorted(df['Local'].unique())
     tous_les_horaires = sorted(df['Horaire'].unique())
     jours_semaine = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi"]
     jours_trad = {"Lundi": 0, "Mardi": 1, "Mercredi": 2, "Jeudi": 3, "Vendredi": 4}
     
+    # Onglets pour les jours (fonctionne bien sur mobile car ils défilent horizontalement)
     onglets = st.tabs(jours_semaine)
 
     for i, jour in enumerate(jours_semaine):
@@ -551,77 +547,43 @@ elif menu == "🎯 Assignation Responsables":
             base_semaine = pd.to_datetime(f"{annee_sel}-W{semaine_sel}-1", format="%G-W%V-%u")
             date_cible = (base_semaine + pd.Timedelta(days=jours_trad[jour])).date()
             
-            # --- RÉCUPÉRATION DES INDISPONIBILITÉS (Colonnes F à I) ---
-            try:
-                # On filtre les lignes où la colonne F (index 5) correspond à la date cible
-                mask_abs = pd.to_datetime(df.iloc[:, 5], errors='coerce').dt.date == date_cible
-                absences_du_jour = df[mask_abs]
-            except:
-                absences_du_jour = pd.DataFrame()
-            
             with st.form(key=f"form_mobile_{jour}"):
                 st.subheader(f"📅 {jour} {date_cible.strftime('%d/%m')}")
                 
                 updates_a_envoyer = []
 
                 for heure in tous_les_horaires:
-                    # Affichage de l'heure
+                    # On affiche l'heure en grand pour séparer les sections
                     st.markdown(f"#### 🕒 {heure}")
                     
+                    # Pour chaque local, on crée une "carte" (un container)
                     for local in tous_les_locaux:
                         mask = (df['Date_DT'].dt.date == date_cible) & (df['Horaire'] == heure) & (df['Local'] == local)
                         resa = df[mask]
 
-                        if not resa.empty and resa.iloc['Equipe'] not in ["Libre", "", None]:
-                            equipe = resa.iloc['Equipe']
-                            current_resp = resa.iloc['Responsable'] if 'Responsable' in resa.columns and pd.notna(resa.iloc['Responsable']) else "-- Choisir --"
+                        if not resa.empty and resa.iloc[0]['Equipe'] not in ["Libre", "", None]:
+                            equipe = resa.iloc[0]['Equipe']
+                            current_resp = resa.iloc[0]['Responsable'] if 'Responsable' in resa.columns and pd.notna(resa.iloc[0]['Responsable']) else ""
                             
+                            # Design en mode "Carte" : fond légèrement grisé pour séparer les simulateurs
                             with st.container():
+                                # On affiche Local et Equipe sur la même ligne ou l'un sous l'autre
                                 st.markdown(f"**{local}** — 👥 *{equipe}*")
-                                
-                                # --- LOGIQUE DE FILTRAGE DES DISPONIBLES ---
-                                # On cherche qui est occupé en colonne G (index 6) pour cette heure en colonne I (index 8)
-                                noms_occupes = absences_du_jour[
-                                    absences_du_jour.iloc[:, 8].astype(str).str.strip() == str(heure).strip()
-                                ].iloc[:, 6].tolist()
-                                
-                                disponibles = [a for a in ANIMATEURS_LISTE if a not in noms_occupes]
-                                
-                                # Construction des options du Selectbox
-                                options = ["-- Choisir --"] + disponibles
-                                
-                                # Si le responsable actuel est marqué absent/occupé, on l'ajoute avec une alerte
-                                if current_resp != "-- Choisir --" and current_resp not in disponibles:
-                                    if f"⚠️ {current_resp} (OCCUPÉ)" not in options:
-                                        options.append(f"⚠️ {current_resp} (OCCUPÉ)")
-
-                                # Calcul de l'index par défaut
-                                default_idx = 0
-                                if current_resp in options:
-                                    default_idx = options.index(current_resp)
-                                elif f"⚠️ {current_resp} (OCCUPÉ)" in options:
-                                    default_idx = options.index(f"⚠️ {current_resp} (OCCUPÉ)")
-
-                                # Remplacement du text_input par un selectbox
-                                resp_sel = st.selectbox(
+                                resp_nom = st.text_input(
                                     f"Responsable pour {local}", 
-                                    options=options,
-                                    index=default_idx,
+                                    value=current_resp, 
                                     key=f"mob_{date_cible}_{heure}_{local}",
-                                    label_visibility="collapsed"
+                                    label_visibility="collapsed",
+                                    placeholder="Nom du responsable..."
                                 )
-                                
-                                # Nettoyage du nom avant envoi (enlever l'émoji ⚠️ et le texte d'erreur)
-                                nom_final = resp_sel.replace("⚠️ ", "").split(" (") if "⚠️" in resp_sel else resp_sel
                                 
                                 updates_a_envoyer.append({
                                     "date": str(date_cible),
                                     "horaire": heure,
                                     "local": local,
-                                    "responsable": nom_final if nom_final != "-- Choisir --" else ""
+                                    "responsable": resp_nom
                                 })
-                    
-                    st.markdown("---")
+                    st.markdown("---") # Séparateur entre les heures
 
                 btn_save = st.form_submit_button(f"💾 ENREGISTRER LE {jour.upper()}", use_container_width=True)
                 
@@ -636,56 +598,6 @@ elif menu == "🎯 Assignation Responsables":
                                     st.rerun()
                             except Exception as e:
                                 st.error(f"Erreur : {e}")
-
-elif menu == "📋 Gestion Personnel":
-    st.header("📋 Gestion du Personnel")
-    
-    ANIMATEURS_LISTE = ["MAX", "ALEX", "SOPHIE", "LUCAS", "JULIE"]
-
-    with st.form("form_gestion_perso"):
-        c1, c2 = st.columns(2)
-        with c1:
-            d_p = st.date_input("Date")
-            n_p = st.selectbox("Animateur", ANIMATEURS_LISTE)
-        with c2:
-            t_p = st.selectbox("Type", ["Réunion", "Absence", "Formation", "Congé"])
-            h_p = st.text_input("Horaire (ex: 10:00)", placeholder="HH:MM")
-        
-        submit = st.form_submit_button("Enregistrer", use_container_width=True)
-        
-        if submit:
-            if not h_p:
-                st.warning("Précisez l'horaire !")
-            else:
-                payload = {
-                    "action": "add_personnel",
-                    "date": d_p.isoformat(), # Format YYYY-MM-DD
-                    "animateur": n_p,
-                    "type": t_p,
-                    "horaire": h_p
-                }
-                
-                try:
-                    res = requests.post(SCRIPT_URL, json=payload)
-                    if "Success" in res.text:
-                        st.success(f"Enregistré : {n_p} en {t_p}")
-                        st.rerun()
-                    else:
-                        st.error(f"Réponse Google : {res.text}")
-                except Exception as e:
-                    st.error(f"Erreur de connexion : {e}")
-
-    # Visualisation du tableau (Colonnes F à I)
-    st.divider()
-    st.subheader("Historique Personnel")
-    try:
-        # On affiche les colonnes F, G, H, I (index 5, 6, 7, 8)
-        # On donne des noms avec Majuscules pour l'affichage
-        df_display = df[df.iloc[:, 5].notna()].iloc[:,]
-        df_display.columns = ["Date", "Animateur", "Type", "Horaire"]
-        st.dataframe(df_display, use_container_width=True, hide_index=True)
-    except:
-        st.info("Aucune donnée personnel trouvée.")
 
 elif menu == "🔐 Administration":
     st.markdown("<h1>⚙️ Gestion des Réservations</h1>", unsafe_allow_html=True)
@@ -784,7 +696,3 @@ elif menu == "🔐 Administration":
         # Message si l'utilisateur n'est pas admin
         st.error("🔒 Accès réservé. Veuillez saisir le mot de passe dans la barre latérale pour accéder à la gestion.")
         st.info("L'administration permet d'ajouter, modifier ou supprimer des créneaux de manière avancée.")
-       
-
-
-
