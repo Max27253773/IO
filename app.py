@@ -384,7 +384,7 @@ elif menu == "🔍 Rechercher":
     nom_cherche = st.text_input("Entrez le nom de l'équipe (ex: ECOLE)", "").upper()
     
     if nom_cherche:
-        # Filtrage sur le nom, l'année et la semaine sélectionnée en sidebar
+        # On s'assure que les noms de colonnes correspondent (Equipe, Date_DT)
         mask = (
             (df['Equipe'].str.contains(nom_cherche, na=False, case=False)) &
             (df['Date_DT'].dt.isocalendar().week == semaine_sel) &
@@ -395,22 +395,24 @@ elif menu == "🔍 Rechercher":
         if not resultats.empty:
             st.success(f"Nombre de créneau(x) trouvé(s) : {len(resultats)}")
             
-            # Affichage sous forme de "Cartes" pour mobile
             for idx, r in resultats.iterrows():
                 with st.container():
                     col_sim, col_info = st.columns([0.2, 0.8])
-                    color = LOCAL_CONFIG.get(r['Local'].strip().upper(), "#333")
+                    # Utilisation de .get() pour éviter un plantage si le local est mal écrit
+                    color = LOCAL_CONFIG.get(str(r['Local']).strip().upper(), "#333")
                     
-                    # Petit carré de couleur du local
                     col_sim.markdown(f"""
                         <div style="background-color:{color}; height:60px; border-radius:10px; 
                         border:2px solid black; display:flex; align-items:center; justify-content:center;">
                         </div>
                         """, unsafe_allow_html=True)
                     
-                    # Détails de la réservation
+                    # CORRECTION ICI : r['Date_DT'] au lieu de r['Date']
+                    # On affiche la date proprement avec .strftime
+                    date_str = r['Date_DT'].strftime('%d/%m/%Y')
+                    
                     col_info.markdown(f"""
-                        **{r['Date']}** — <span style="color:{color}; font-weight:bold;">{r['Local']}</span><br>
+                        **{date_str}** — <span style="color:{color}; font-weight:bold;">{r['Local']}</span><br>
                         ⌚ **{r['Horaire']}**
                         """, unsafe_allow_html=True)
                     st.divider()
