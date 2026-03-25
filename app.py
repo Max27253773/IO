@@ -226,11 +226,7 @@ if menu == "📅 Planning":
                 html_jour += f'<div style="position:absolute; top:{top_p}px; height:{haut}px; left:65px; right:5px; background-color:{current_color}; color:white; padding:5px; border-radius:4px; font-size:14px; border:1px solid black; z-index:10;">{r["Equipe"]}</div>'
         
         st.markdown(html_jour + '</div>', unsafe_allow_html=True)
-Voici le code complet, corrigé et harmonisé pour ton interface de planning. Ce bloc remplace toute la partie "INTERFACE" et "Planning" de ton fichier.
 
-J'ai intégré la connexion Supabase pour la réservation rapide et j'ai nettoyé les noms de variables pour éviter les NameError que tu as eus précédemment.
-
-Python
 # --- 6. NAVIGATION & SIDEBAR ---
 df = load_data()
 
