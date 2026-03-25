@@ -609,3 +609,4 @@ elif menu == "🔐 Administration":
                 st.warning("Aucun créneau à supprimer cette semaine.")
     else:
         st.error("🔒 Accès réservé. Veuillez saisir le mot de passe dans la barre latérale.")
+        st.info("L'administration permet d'ajouter, modifier ou supprimer des créneaux de manière avancée.")
