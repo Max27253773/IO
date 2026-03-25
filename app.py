@@ -179,518 +179,109 @@ def verifier_conflit(df, date_test, horaire_test, local_test, equipe_test, exclu
 
     return "ok", ""
 
-# --- 9. SIDEBAR & NAVIGATION ---
-st.sidebar.markdown('<div style="text-align: center; font-family: \'Impact\'; font-size: 15px;">⌬ IO</div>', unsafe_allow_html=True)
+# --- 5. INTERFACE & SIDEBAR ---
+LOCAL_CONFIG = {"JUP": "#1976D2", "MIN": "#C2185B", "JUN": "#757575", "BAC": "#388E3C", "MARS": "#D32F2F", "SAT": "#E65100", "CRO": "#A1887F", "NEK": "#C5A000", "PHO": "#DAA520", "PERS": "#558B2F", "SAG": "#4A148C"}
+QUARTS_HEURES = [f"{h:02d}:{m}" for h in range(6, 20) for m in ["00", "30"]] + ["20:00"]
 
 menus = ["📅 Planning", "🖥️ Supervision", "🔍 Rechercher", "📊 Statistiques"]
-if st.session_state["role"] == "Animateur":
-    menus += ["🎯 Assignation Responsables", "🔐 Administration"]
+if st.session_state["role"] == "Animateur": menus += ["🎯 Assignation Responsables", "🔐 Administration"]
 
 menu = st.sidebar.radio("MENU", menus)
-
 st.sidebar.divider()
 annee_sel = st.sidebar.selectbox("Année",, index=1)
 semaine_sel = st.sidebar.selectbox("Semaine", range(1, 54), index=datetime.now().isocalendar()-1)
 local_sel = st.sidebar.selectbox("Local", list(LOCAL_CONFIG.keys()))
 jours_fr = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi"]
-choix_j_global = st.sidebar.selectbox("Jour", jours_fr, index=min(datetime.now().weekday(), 4))
+choix_j = st.sidebar.selectbox("Jour", jours_fr, index=min(datetime.now().weekday(), 4))
 mode_vue = st.sidebar.segmented_control("Format", ["Semaine", "Jour"], default="Jour")
 
-# Calcul des dates de la semaine
+# Calcul dates
 monday = (datetime(annee_sel, 1, 4) - timedelta(days=datetime(annee_sel, 1, 4).weekday())) + timedelta(weeks=semaine_sel-1)
 week_days = [monday + timedelta(days=i) for i in range(5)]
-d_active = week_days[jours_fr.index(choix_j_global)]
+d_active = week_days[jours_fr.index(choix_j)]
 
-# --- INTERFACE ---
+# --- 6. LOGIQUE DES PAGES ---
 df = load_data()
-# --- 1. DÉFINITION DE LA LISTE DE BASE ---
-# Accessible à tout le monde
-menus_de_base = ["📅 Planning", "🖥️ Supervision", "🔍 Rechercher", "📊 Statistiques"]
+is_admin = (st.session_state["role"] == "Animateur")
 
-# --- 2. LOGIQUE RÉSERVÉE À L'ANIMATEUR ---
-if st.session_state.get("role") == "Animateur":
-    # Insertion des options supplémentaires dans la liste
-    menus_de_base.insert(4, "🎯 Assignation Responsables")
-    menus_de_base.insert(5, "🔐 Administration")
-
-    # Affichage du menu principal
-    menu = st.sidebar.radio("MENU", menus_de_base)
-
-    # BLOC ACCÈS ADMIN (Visible uniquement pour l'Animateur)
-    st.sidebar.markdown("---")
-    st.sidebar.title("🔐 Accès ADMIN")
-    admin_key = st.sidebar.text_input("Mot de passe", type="password", key="global_pwd")
-    
-    # Vérification de la clé
-    is_admin = (admin_key == ADMIN_PASSWORD)
-    if is_admin:
-        st.sidebar.success("Mode Administrateur Actif")
-    elif admin_key != "":
-        st.sidebar.error("Mot de passe incorrecte")
-
-else:
-    # --- 3. AFFICHAGE POUR L'UTILISATEUR SIMPLE (UT) ---
-    menu = st.sidebar.radio("MENU", menus_de_base)
-    is_admin = False # Sécurité pour bloquer les fonctions admin
-
-st.sidebar.divider()
-
-# --- CALCUL AUTOMATIQUE DATE/SEMAINE ---
-maintenant = datetime.now()
-annee_actuelle = maintenant.year
-semaine_actuelle = maintenant.isocalendar()[1]
-jour_actuel_idx = maintenant.weekday() 
-
-annee_sel = st.sidebar.selectbox("Année", [2025, 2026, 2027], index=1)
-semaine_sel = st.sidebar.selectbox("Semaine", range(1, 54), index=semaine_actuelle - 1)
-jours_fr_liste = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi"]
-choix_j_global = st.sidebar.selectbox("Jour", jours_fr_liste, index=min(maintenant.weekday(), 4) if annee_sel == maintenant.year else 0)
-local_sel = st.sidebar.selectbox("Local", list(LOCAL_CONFIG.keys()))
-
-st.sidebar.divider()
-st.sidebar.subheader("📱 Options d'affichage")
-mode_vue = st.sidebar.segmented_control("Format", ["Semaine", "Jour"], default="Jour")
-
-# --- COPYRIGHT ET SIGNATURE ---
-st.sidebar.divider()
-st.sidebar.markdown(
-    """
-    <div style='text-align: center; color: #666666; font-size: 0.8rem; padding: 10px;'>
-        © 2026 <b>.........</b><br>
-        Tous droits réservés<br>
-        <span style='font-size: 0.7rem;'>Version Bêta - Planning </span>
-    </div>
-    """, 
-    unsafe_allow_html=True
-)
-
-monday = (datetime(annee_sel, 1, 4) - timedelta(days=datetime(annee_sel, 1, 4).weekday())) + timedelta(weeks=semaine_sel-1)
-week_days = [monday + timedelta(days=i) for i in range(5)]
-
-d = week_days[jours_fr_liste.index(choix_j_global)]
-
-current_color = LOCAL_CONFIG.get(local_sel, "#000000")
-text_on_color = "#000000" if local_sel in ["PHOBOS", "NEKKAR"] else "#FFFFFF"
-
-# --- CSS COMPLET ---
-st.markdown(f"""
-    <style>
-    .stApp {{ background-color: #FFFFFF !important; }}
-    [data-testid="stSidebar"] {{ background-color: #E2E8F0 !important; border-right: 2px solid #000000 !important; }}
-    h1 {{ font-size: 1.8rem !important; font-weight: 900 !important; color: #000000 !important; }}
-    
-    /* Mode Jour : Cadre ajusté pour finir à 20h00 */
-    .planning-frame {{
-        position: relative; width: 100%; background: #FFFFFF;
-        height: 1260px; /* Hauteur exacte pour 6h-20h (14h * 90px) */
-        border: 1px solid #000; margin-bottom: 30px;
-        overflow: hidden;
-    }}
-    .hour-row-fixed {{
-        position: absolute; left: 0; right: 0; height: 45px;
-        display: flex; align-items: center; border-bottom: 1px dashed #CCC; box-sizing: border-box;
-    }}
-    
-    /* Mode Semaine : Grille flexible */
-    .slot-container-week {{ position: relative; width: 100%; height: 45px; box-sizing: border-box; }}
-    .grid-line-hour {{ border-bottom: 2px solid #333333 !important; height: 45px; box-sizing: border-box; }}
-    .grid-line-min {{ border-bottom: 1px dashed #777777 !important; height: 45px; box-sizing: border-box; }}
-
-    .calendar-cell-unique {{ 
-        position: absolute; z-index: 100; border: 2px solid #000000; 
-        color: {text_on_color} !important; text-align: center; font-weight: 900; 
-        display: flex; align-items: center; justify-content: center; 
-        box-shadow: 2px 2px 0px rgba(0,0,0,1); box-sizing: border-box;
-    }}
-    
-    .stButton button {{ width: 100% !important; font-weight: bold !important; }}
-    </style>
-    """, unsafe_allow_html=True)
-
-df_view = df[df['Local'].str.strip().str.upper() == local_sel.upper()]
-
-# --- NAVIGATION ---
+# CSS dynamique
+st.markdown(f"""<style>.calendar-cell-unique {{ position: absolute; z-index: 100; border: 2px solid #000; color: white; text-align: center; font-weight: 900; display: flex; align-items: center; justify-content: center; box-shadow: 2px 2px 0px black; } .planning-frame {{ position: relative; width: 100%; height: 1260px; border: 1px solid #000; overflow: hidden; }} .hour-row-fixed {{ position: absolute; left: 0; right: 0; height: 45px; display: flex; align-items: center; border-bottom: 1px dashed #CCC; }}</style>""", unsafe_allow_html=True)
 
 if menu == "📅 Planning":
-    st.markdown(f"<h1>{local_sel}</h1>", unsafe_allow_html=True)
+    st.title(f"📍 {local_sel}")
+    c_color = LOCAL_CONFIG.get(local_sel, "#000")
+    
     if mode_vue == "Jour":
-        # On utilise choix_j_global qui vient de la sidebar
-        d = week_days[jours_fr_liste.index(choix_j_global)]
-        
-        st.markdown(f"<div style='text-align:center; background-color:{current_color}; color:{text_on_color}; padding:8px; font-weight:900; border:2px solid black; box-shadow: 2px 2px 0px black; margin-bottom:10px;'>{choix_j_global} {d.strftime('%d/%m')}</div>", unsafe_allow_html=True)
-        
-        # --- DESSIN DU PLANNING ---
-        html_jour = '<div class="planning-frame">'
-        for i, q in enumerate(QUARTS_HEURES):
-            if i >= 29: break
+        st.info(f"{choix_j} {d_active.strftime('%d/%m')}")
+        html = '<div class="planning-frame">'
+        for i, q in enumerate(QUARTS_HEURES[:29]):
             top = i * 45
-            style = "border-bottom: 2px solid #333;" if q.endswith(":00") else ""
-            html_jour += f'<div class="hour-row-fixed" style="top:{top}px; {style}"><div style="width:60px; text-align:right; padding-right:8px; font-weight:900; border-right:3px solid {current_color}; background:#F0F2F6; height:100%; display:flex; align-items:center; justify-content:flex-end; color:black;">{q}</div></div>'
+            html += f'<div class="hour-row-fixed" style="top:{top}px;"><div style="width:60px; font-weight:900; color:black;">{q}</div></div>'
         
-        resas = df_view[df_view['Date_DT'].dt.date == d.date()]
+        resas = df[(df['Date'] == str(d_active.date())) & (df['Local'] == local_sel)]
         for _, r in resas.iterrows():
-            h_deb, h_f = extraire_heures(r['Horaire'])
-            if h_deb is not None:
-                top_p = int((h_deb - 6) * 90)
-                haut = int((h_f - h_deb) * 90) - 2
-                html_jour += f'<div class="calendar-cell-unique" style="top:{top_p}px; height:{haut}px; left:65px; right:5px; background-color:{current_color}; font-size:14px;">{r["Equipe"]}</div>'
-        st.markdown(html_jour + '</div>', unsafe_allow_html=True)
+            h_d, h_f = extraire_heures(r['Horaire'])
+            if h_d:
+                top_p, haut = int((h_d-6)*90), int((h_f-h_d)*90)-2
+                html += f'<div class="calendar-cell-unique" style="top:{top_p}px; height:{haut}px; left:65px; right:5px; background:{c_color};">{r["Equipe"]}</div>'
+        st.markdown(html + "</div>", unsafe_allow_html=True)
 
-        # --- QUICK BOOKING CONDITIONNEL ---
-        if is_admin:
-            with st.expander("⚡ RÉSERVATION RAPIDE", expanded=False):
-               with st.form("quick_booking"):
-                    c1, c2 = st.columns(2)
-                    q_eq = c1.text_input("Équipe", placeholder="Nom")
-                    q_hr = c2.text_input("Horaire", placeholder="08h00 - 10h00")
-            
-                    # Case à cocher pour forcer si doublon
-                    force_confirm = st.checkbox("Autoriser le doublon (Equipe déjà ailleurs)")
-            
-                    if st.form_submit_button("Vérifier et valider"):
-                        if q_eq and q_hr:
-                            # On passe bien les 5 arguments à la fonction
-                            status, msg = verifier_conflit(df, d, q_hr, local_sel, q_eq)
-                    
-                            if status == "block":
-                                st.error(msg)
-                            elif status == "warn" and not force_confirm:
-                                st.warning(msg)
-                                st.info("Cochez la case ci-dessus pour confirmer le doublon.")
-                            else:
-                                # Cas "ok" OU (cas "warn" ET case cochée)
-                                requests.post(SCRIPT_URL, data=json.dumps({
-                                    "action":"add", 
-                                    "date":d.strftime("%d/%m/%Y"),
-                                    "equipe":q_eq.upper(), 
-                                    "horaire":q_hr, 
-                                    "local":local_sel
-                                }))
-                                st.success("✅ Réservé !"), time.sleep(1), st.rerun()
-                        else:
-                            st.warning("Veuillez remplir les champs.")
-    else:
-        # MODE SEMAINE
-        cols = st.columns([0.6] + [1]*5)
-        for i, d in enumerate(week_days):
-            cols[i+1].markdown(f"<div style='text-align:center; background-color:{current_color}; color:{text_on_color}; padding:8px; font-weight:900; border:2px solid black; box-shadow: 2px 2px 0px black;'>{jours_fr_liste[i]}<br>{d.strftime('%d/%m')}</div>", unsafe_allow_html=True)
+elif menu == "🔐 Administration" and is_admin:
+    st.title("⚙️ Gestion Supabase")
+    tab1, tab2, tab3 = st.tabs(["➕ Ajouter", "📝 Modifier", "🗑️ Supprimer"])
+    
+    with tab1:
+        with st.form("add"):
+            d_a, e_a, h_a = st.date_input("Date"), st.text_input("Equipe"), st.text_input("Horaire (08:00-10:00)")
+            if st.form_submit_button("VALIDER"):
+                status, msg = verifier_conflit(df, d_a, h_a, local_sel, e_a)
+                if status == "ok":
+                    db_add(d_a, e_a, h_a, local_sel)
+                    st.success("Ajouté !"); time.sleep(1); st.rerun()
+                else: st.error(msg)
 
-        for q in QUARTS_HEURES:
-            row_cols = st.columns([0.6] + [1]*5)
-            is_pile = q.endswith(":00")
-            h_act = int(q.split(':')[0]) + int(q.split(':')[1])/60
-            border_style = f"border-right:4px solid {current_color};" if is_pile else "border-right:1px solid #CCC;"
-            row_cols[0].markdown(f"<div style='height:45px; display:flex; align-items:center; justify-content:flex-end; padding-right:10px; font-weight:900; {border_style}'>{q}</div>", unsafe_allow_html=True)
-            
-            for i, d in enumerate(week_days):
-                with row_cols[i+1]:
-                    resas = df_view[df_view['Date_DT'].dt.date == d.date()]
-                    html_bloc = ""
-                    for _, r in resas.iterrows():
-                        h_deb, h_fin = extraire_heures(r['Horaire'])
-                        if h_deb == h_act:
-                            hauteur_px = int((h_fin - h_deb) * 2 * 45) - 2
-                            html_bloc += f'<div class="calendar-cell-unique" style="top:1px; left:2px; right:2px; height:{hauteur_px}px; background-color:{current_color}; font-size:10px;">{r["Equipe"]}</div>'
-                    grid_class = 'grid-line-hour' if is_pile else 'grid-line-min'
-                    st.markdown(f"<div class='slot-container-week'><div class='{grid_class}'></div>{html_bloc}</div>", unsafe_allow_html=True)
+    with tab2:
+        df_week = df[df['Date_DT'].dt.isocalendar().week == semaine_sel]
+        if not df_week.empty:
+            sel_id = st.selectbox("Ligne", df_week['id'].tolist(), format_func=lambda x: f"{df[df['id']==x]['Equipe'].values} - {df[df['id']==x]['Local'].values}")
+            with st.form("edit"):
+                row = df[df['id']==sel_id].iloc
+                new_e, new_h = st.text_input("Equipe", row['Equipe']), st.text_input("Horaire", row['Horaire'])
+                if st.form_submit_button("MODIFIER"):
+                    db_update(sel_id, row['Date'], new_e, new_h, row['Local'])
+                    st.success("Modifié !"); time.sleep(1); st.rerun()
+
+    with tab3:
+        id_del = st.selectbox("Supprimer", df['id'].tolist(), key="del")
+        if st.button("SUPPRIMER DÉFINITIVEMENT", type="primary"):
+            db_delete(id_del)
+            st.success("Supprimé !"); time.sleep(1); st.rerun()
+
+elif menu == "🎯 Assignation Responsables" and is_admin:
+    st.title("🎯 Responsables")
+    ANIMATEURS = ["MAX", "ALEKS", "ALEX", "MAEL", "ELIES", "LISE", "SIMON", "JOSS"]
+    df_resp = df[df['Date_DT'].dt.isocalendar().week == semaine_sel].sort_values('Date')
+    
+    for _, row in df_resp.iterrows():
+        with st.container():
+            col1, col2 = st.columns()
+            col1.write(f"**{row['Date']}** | {row['Horaire']} | {row['Equipe']} ({row['Local']})")
+            current_idx = ANIMATEURS.index(row['Responsable']) if row['Responsable'] in ANIMATEURS else 0
+            new_res = col2.selectbox("Resp", ANIMATEURS, index=current_idx, key=f"res_{row['id']}")
+            if new_res != row['Responsable']:
+                db_update_resp(row['id'], new_res)
+                st.rerun()
 
 elif menu == "🖥️ Supervision":
-    st.markdown("<h1>🖥️ Vue d'ensemble des Locaux</h1>", unsafe_allow_html=True)
-    
-    # On utilise choix_j_global (sidebar) et d (calculé plus haut)
-    st.info(f"Visualisation de tous les locaux pour le **{choix_j_global} {d.strftime('%d/%m/%Y')}**")
-
-    # On utilise d pour le filtrage
-    df_jour = df[df['Date_DT'].dt.date == d.date()]
-
-    # Création de la grille de données (Heures en lignes, Locaux en colonnes)
-    # On crée une liste d'heures (toutes les 30 min)
-    heures_sup = [f"{h:02d}:{m}" for h in range(6, 20) for m in ["00", "30"]]
-    
-    # On prépare le tableau HTML
-    html_sup = """
-    <div style="overflow-x: auto;">
-        <table style="width: 100%; border-collapse: collapse; font-family: sans-serif; font-size: 0.8rem;">
-            <thead>
-                <tr style="background-color: #f0f2f6;">
-                    <th style="border: 1px solid #ddd; padding: 8px; position: sticky; left: 0; background: #f0f2f6; z-index: 10; color: black;">Heure</th>
-    """
-    
-    # Ajout des colonnes pour chaque simulateur
-    for s in LOCAL_CONFIG.keys():
-        color = LOCAL_CONFIG[s]
-        html_sup += f'<th style="border: 1px solid #ddd; padding: 8px; background-color: {color}; color: white; text-align: center; min-width: 80px;">{s}</th>'
-    
-    html_sup += "</tr></thead><tbody>"
-
-    # Remplissage des lignes
-    for h_str in heures_sup:
-        h_val = int(h_str.split(':')[0]) + int(h_str.split(':')[1])/60
-        html_sup += f'<tr><td style="border: 1px solid #ddd; padding: 4px; font-weight: bold; position: sticky; left: 0; background: white; z-index: 5; color: black;">{h_str}</td>'
-        
-        for s in LOCAL_CONFIG.keys():
-            # Vérifier si une réservation existe pour ce local à cette heure
-            occupe = False
-            nom_eq = ""
-            
-            # On cherche les résas de ce local
-            resas_local = df_jour[df_jour['Local'].str.strip().str.upper() == s.upper()]
-            for _, r in resas_local.iterrows():
-                h_deb, h_fin = extraire_heures(r['Horaire'])
-                if h_deb is not None and h_deb <= h_val < h_fin:
-                    occupe = True
-                    nom_eq = r['Equipe']
-                    break
-            
-            if occupe:
-                color = LOCAL_CONFIG[s]
-                html_sup += f'<td style="border: 1px solid #ddd; padding: 2px; background-color: {color}44; color: black; text-align: center; font-size: 0.6rem; font-weight: bold;">{nom_eq}</td>'
-            else:
-                html_sup += '<td style="border: 1px solid #ddd; padding: 2px; background-color: white;"></td>'
-        
-        html_sup += "</tr>"
-    
-    html_sup += "</tbody></table></div>"
-    
-    st.markdown(html_sup, unsafe_allow_html=True)
-    
-    # Petite légende
-    st.caption("💡 Astuce : Sur mobile, faites glisser le tableau vers la droite pour voir tous les locaux.")
+    st.title("🖥️ Vue d'ensemble")
+    # (Affichage simplifié pour la supervision)
+    st.dataframe(df[df['Date'] == str(d_active.date())][['Horaire', 'Local', 'Equipe', 'Responsable']], use_container_width=True)
 
 elif menu == "🔍 Rechercher":
-    st.markdown("<h1>🔍 Rechercher par Équipe</h1>", unsafe_allow_html=True)
-    
-    # Zone de recherche
-    nom_cherche = st.text_input("Entrez le nom de l'équipe (ex: ECOLE)", "").upper()
-    
-    if nom_cherche:
-        # Filtrage sur le nom, l'année et la semaine sélectionnée en sidebar
-        mask = (
-            (df['Equipe'].str.contains(nom_cherche, na=False, case=False)) &
-            (df['Date_DT'].dt.isocalendar().week == semaine_sel) &
-            (df['Date_DT'].dt.year == annee_sel)
-        )
-        resultats = df[mask].sort_values(by=['Date_DT', 'Horaire'])
-
-        if not resultats.empty:
-            st.success(f"Nombre de créneau(x) trouvé(s) : {len(resultats)}")
-            
-            # Affichage sous forme de "Cartes" pour mobile
-            for idx, r in resultats.iterrows():
-                with st.container():
-                    col_sim, col_info = st.columns([0.2, 0.8])
-                    color = LOCAL_CONFIG.get(r['Local'].strip().upper(), "#333")
-                    
-                    # Petit carré de couleur du local
-                    col_sim.markdown(f"""
-                        <div style="background-color:{color}; height:60px; border-radius:10px; 
-                        border:2px solid black; display:flex; align-items:center; justify-content:center;">
-                        </div>
-                        """, unsafe_allow_html=True)
-                    
-                    # Détails de la réservation
-                    col_info.markdown(f"""
-                        **{r['Date']}** — <span style="color:{color}; font-weight:bold;">{r['Local']}</span><br>
-                        ⌚ **{r['Horaire']}**
-                        """, unsafe_allow_html=True)
-                    st.divider()
-        else:
-            st.warning(f"Aucune réservation trouvée pour '{nom_cherche}' en semaine {semaine_sel}.")
-    else:
-        st.info("Saisissez un nom pour voir votre planning de la semaine.")
-
-elif menu == "📊 Statistiques":
-    st.markdown("<h1>📊 Statistiques</h1>", unsafe_allow_html=True)
-    if not df.empty:
-        def calcul_duree(horaire_str):
-            h_deb, h_fin = extraire_heures(horaire_str)
-            return (h_fin - h_deb) if h_deb is not None else 0
-        df['Duree_H'] = df['Horaire'].apply(calcul_duree)
-        df['Mois'] = df['Date_DT'].dt.strftime('%m - %B')
-        df['Annee'] = df['Date_DT'].dt.year
-
-        st.subheader("📁 Volume horaire par équipe (Mensuel)")
-        mois_dispo = sorted(df['Mois'].unique())
-        mois_sel = st.selectbox("Mois", mois_dispo, index=len(mois_dispo)-1)
-        stats_equipe = df[df['Mois'] == mois_sel].groupby('Equipe')['Duree_H'].sum().reset_index()
-        st.dataframe(stats_equipe.sort_values(by='Duree_H', ascending=False), use_container_width=True, hide_index=True)
-
-        st.divider()
-        st.subheader("🖥️ Utilisation des locaux (Annuel)")
-        stats_local = df[df['Annee'] == annee_sel].groupby('Local')['Duree_H'].sum().sort_values(ascending=False)
-        st.bar_chart(stats_local)
-    else:
-        st.warning("Aucune donnée.")
-
-elif menu == "🎯 Assignation Responsables":
-    st.header(f"🎯 Responsables - Semaine {semaine_sel}")
-    
-    ANIMATEURS = ["-- Choisir --", "MAX", "ALEKS", "ALEX", "MAEL", "ELIES", "LISE", "SIMON", "JOSS"]
-    
-    tous_les_locaux = sorted(df['Local'].unique())
-    tous_les_horaires = sorted(df['Horaire'].unique())
-    jours_semaine = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi"]
-    jours_trad = {"Lundi": 0, "Mardi": 1, "Mercredi": 2, "Jeudi": 3, "Vendredi": 4}
-    
-    onglets = st.tabs(jours_semaine)
-
-    for i, jour in enumerate(jours_semaine):
-        with onglets[i]:
-            base_semaine = pd.to_datetime(f"{annee_sel}-W{semaine_sel}-1", format="%G-W%V-%u")
-            date_cible = (base_semaine + pd.Timedelta(days=jours_trad[jour])).date()
-            
-            # INITIALISATION DU FORMULAIRE
-            with st.form(key=f"form_assign_{jour}"):
-                st.subheader(f"📅 {jour} {date_cible.strftime('%d/%m')}")
-                updates_a_envoyer = []
-
-                for heure in tous_les_horaires:
-                    # Filtrer les réservations pour ce jour et cette heure
-                    mask_jour_heure = (df['Date_DT'].dt.date == date_cible) & (df['Horaire'] == heure)
-                    activites_creneau = df[mask_jour_heure]
-
-                    if not activites_creneau.empty:
-                        st.markdown(f"#### 🕒 {heure}")
-                        
-                        for _, row in activites_creneau.iterrows():
-                            # Vérification de l'équipe (Correction du .iloc ici via 'row')
-                            if pd.notna(row['Equipe']) and row['Equipe'] not in ["Libre", ""]:
-                                equipe = row['Equipe']
-                                local = row['Local']
-                                current_resp = str(row['Responsable']) if pd.notna(row['Responsable']) else "-- Choisir --"
-                                
-                                # Calcul de l'index pour la selectbox
-                                def_idx = ANIMATEURS.index(current_resp) if current_resp in ANIMATEURS else 0
-
-                                with st.container():
-                                    st.write(f"🏠 **{local}** — 👥 *{equipe}*")
-                                    resp_choisi = st.selectbox(
-                                        f"Responsable {local} {heure}",
-                                        ANIMATEURS,
-                                        index=def_idx,
-                                        key=f"sel_{date_cible}_{heure}_{local}",
-                                        label_visibility="collapsed"
-                                    )
-                                    
-                                    updates_a_envoyer.append({
-                                        "date": str(date_cible),
-                                        "horaire": str(heure),
-                                        "local": str(local),
-                                        "responsable": resp_choisi if resp_choisi != "-- Choisir --" else ""
-                                    })
-                
-                # LE BOUTON DOIT ÊTRE À L'INTÉRIEUR DU "WITH ST.FORM"
-                btn_save = st.form_submit_button(f"💾 ENREGISTRER LE {jour.upper()}", use_container_width=True)
-                
-                # LOGIQUE D'ENVOI (Après le clic sur le bouton)
-                if btn_save:
-                    if updates_a_envoyer:
-                        try:
-                            payload = {"action": "update_batch_responsables", "data": updates_a_envoyer}
-                            response = requests.post(SCRIPT_URL, json=payload)
-                            if "Success" in response.text:
-                                st.success(f"✅ Mis à jour pour le {jour} !")
-                                st.rerun()
-                            else:
-                                st.error(f"Erreur : {response.text}")
-                        except Exception as e:
-                            st.error(f"Erreur de connexion : {e}")
- 
-elif menu == "🔐 Administration":
-    st.markdown("<h1>⚙️ Gestion des Réservations</h1>", unsafe_allow_html=True)
-    
-    # Plus besoin de 'pwd = st.sidebar.text_input...' ici !
-    # On utilise directement la variable 'is_admin' définie plus haut
-    
-    if is_admin:
-        tab1, tab2, tab3 = st.tabs(["➕ Ajouter", "📝 Modifier", "🗑️ Supprimer"])
-        
-        # Le reste de ton code d'administration (df_filtre_admin, etc.) continue ici...
-        df_filtre_admin = df[
-            (df['Date_DT'].dt.isocalendar().week == semaine_sel) & 
-            (df['Date_DT'].dt.year == annee_sel)
-        ].sort_values(by=['Date_DT', 'Horaire'])
-        
-        with tab1:
-           with st.form("ajouter_form", clear_on_submit=True):
-            d_add = st.date_input("Date", value=datetime.now())
-            eq_add = st.text_input("Equipe", placeholder="Nom")
-            hr_add = st.text_input("Horaire", placeholder="08h00 - 10h00")
-            lc_add = st.selectbox("Local", list(LOCAL_CONFIG.keys()), index=list(LOCAL_CONFIG.keys()).index(local_sel))
-            
-            # Le bouton principal du formulaire
-            if st.form_submit_button("Vérifier et Ajouter"):
-                if eq_add and hr_add:
-                    status, msg = verifier_conflit(df, d_add, hr_add, lc_add, eq_add)
-                    
-                    if status == "block":
-                        st.error(f"❌ {msg}")
-                    elif status == "warn":
-                        st.warning(f"⚠️ {msg}")
-                        # On mémorise les infos pour le bouton de confirmation qui est HORS du formulaire
-                        st.session_state['confirm_add_doublon'] = {"date":d_add, "eq":eq_add, "hr":hr_add, "lc":lc_add}
-                    else:
-                        requests.post(SCRIPT_URL, data=json.dumps({"action":"add","date":d_add.strftime("%d/%m/%Y"),"equipe":eq_add.upper(),"horaire":hr_add,"local":lc_add}))
-                        st.success("✅ Réservation validée !"), time.sleep(1), st.rerun()
-                else:
-                    st.warning("Veuillez remplir tous les champs.")
-
-        # --- ICI ON EST HORS DU FORMULAIRE (aligné sur le 'with') ---
-        if st.session_state.get('confirm_add_doublon'):
-            st.info("ℹ️ Cliquez ci-dessous pour forcer l'ajout en doublon.")
-            if st.button("👍 Confirmer le doublon volontaire", key="confirm_add"):
-                conf = st.session_state['confirm_add_doublon']
-                requests.post(SCRIPT_URL, data=json.dumps({
-                    "action":"add",
-                    "date":conf['date'].strftime("%d/%m/%Y"),
-                    "equipe":conf['eq'].upper(),
-                    "horaire":conf['hr'],
-                    "local":conf['lc']
-                }))
-                del st.session_state['confirm_add_doublon'] # On nettoie la session
-                st.success("✅ Doublon ajouté !"), time.sleep(1), st.rerun()
-            
-            else:
-                st.warning("Veuillez remplir tous les champs.")
-
-        with tab2:
-            if not df_filtre_admin.empty:
-                idx_mod = st.selectbox("Sélectionner le créneau", df_filtre_admin.index, format_func=lambda i: f"{df.loc[i,'Date']} | {df.loc[i,'Equipe']} ({df.loc[i,'Horaire']}) {df.loc[i,'Local']}")
-                with st.form("modifier_form"):
-                    ed = st.date_input("Date", value=df.loc[idx_mod,'Date_DT'])
-                    ee = st.text_input("Equipe", df.loc[idx_mod,'Equipe'])
-                    eh = st.text_input("Horaire", df.loc[idx_mod,'Horaire'])
-                    es = st.selectbox("Local", list(LOCAL_CONFIG.keys()), index=list(LOCAL_CONFIG.keys()).index(str(df.loc[idx_mod,'Local']).strip().upper()))
-                    if st.form_submit_button("Vérifier et Enregistrer"):
-                        status, msg = verifier_conflit(df, ed, eh, es, ee, exclude_idx=idx_mod)
-                        
-                        if status == "block":
-                            st.error(f"❌ MODIFICATION IMPOSSIBLE : {msg}")
-                        elif status == "warn":
-                            st.warning(f"⚠️ {msg}")
-                            st.session_state['confirm_mod_doublon'] = {"row":int(idx_mod)+2, "date":ed, "eq":ee, "hr":eh, "sm":es}
-                        else:
-                            requests.post(SCRIPT_URL, data=json.dumps({"action":"update","row":int(idx_mod)+2,"date":ed.strftime("%d/%m/%Y"),"equipe":ee.upper(),"horaire":eh,"local":es}))
-                            st.success("📝 Modification enregistrée !"), time.sleep(1), st.rerun()
-
-                # Bouton de confirmation de modification pour l'admin
-                if st.session_state.get('confirm_mod_doublon'):
-                    if st.button("👍 Confirmer la modification en doublon"):
-                        conf = st.session_state['confirm_mod_doublon']
-                        requests.post(SCRIPT_URL, data=json.dumps({"action":"update","row":conf['row'],"date":conf['date'].strftime("%d/%m/%Y"),"equipe":conf['eq'].upper(),"horaire":conf['hr'],"local":conf['sm']}))
-                        del st.session_state['confirm_mod_doublon']
-                        st.success("📝 Modification forcée effectuée !"), time.sleep(1), st.rerun()
-            else:
-                st.warning("Aucun créneau à modifier cette semaine.")
-
-        with tab3:
-            if not df_filtre_admin.empty:
-                t_del = st.selectbox("Créneau à supprimer", df_filtre_admin.index, format_func=lambda i: f"{df.loc[i,'Date']} | {df.loc[i,'Equipe']} ({df.loc[i,'Horaire']}) {df.loc[i,'Local']}")
-                if st.button("❌ Supprimer définitivement", disabled=not st.checkbox("Confirmer")):
-                    requests.post(SCRIPT_URL, data=json.dumps({"action":"delete","row":int(t_del)+2}))
-                    st.success("🗑️ Supprimé !"), time.sleep(1), st.rerun()
-    else:
-        # Message si l'utilisateur n'est pas admin
-        st.error("🔒 Accès réservé. Veuillez saisir le mot de passe dans la barre latérale pour accéder à la gestion.")
+    st.title("🔍 Recherche")
+    query = st.text_input("Nom de l'équipe").upper()
+    if query:
+        res = df[df['Equipe'].str.contains(query, na=False)]
+        st.table(res[['Date', 'Horaire', 'Local', 'Responsable']])
         st.info("L'administration permet d'ajouter, modifier ou supprimer des créneaux de manière avancée.")
        
