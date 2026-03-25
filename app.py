@@ -1,21 +1,27 @@
 import streamlit as st
 import pandas as pd
-import requests
 import time
 import re
 import json
-import io
 from datetime import datetime, timedelta
-from PIL import Image, ImageDraw, ImageFont
+from supabase import create_client
 
-# --- 1. CONFIGURATION ---
+# --- 1. CONFIGURATION SUPABASE ---
+# Ces clés permettent de connecter ton application à ta base de données
+SUPABASE_URL = "https://uyqmviseejbvsngwbpkt.supabase.co"
+SUPABASE_KEY = "sb_publishable_tEx11emOTmYUiXip8VeRTA_XsA8jfve"
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+# --- 2. CONFIGURATION DE LA PAGE ---
 st.set_page_config(page_title="IO", layout="wide", initial_sidebar_state="expanded")
 
-# --- 2. INITIALISATION DE LA SESSION ---
+# --- 3. INITIALISATION DE LA SESSION ---
 if "auth" not in st.session_state:
     st.session_state["auth"] = False
+if "role" not in st.session_state:
+    st.session_state["role"] = None
 
-# --- 3. LOGIQUE VISUELLE DE CONNEXION ---
+# --- 4. LOGIQUE DE CONNEXION (DESIGN NÉOMORPHIQUE) ---
 if not st.session_state["auth"]:
     st.markdown("""
         <style>
@@ -58,23 +64,19 @@ if not st.session_state["auth"]:
         submit_auth = st.form_submit_button("SE CONNECTER")
         
         if submit_auth:
-            # Dictionnaire des accès avec rôles
             credentials = {
                 "UT": {"pw": "Azerty123*", "role": "Utilisateur"},
                 "ANIM": {"pw": "Anim2026*", "role": "Animateur"}
             }
-            
             if user_input in credentials and pw_input == credentials[user_input]["pw"]:
                 st.session_state["auth"] = True
                 st.session_state["role"] = credentials[user_input]["role"]
-                st.success(f"Accès en tant qu'{st.session_state['role']}")
-                time.sleep(0.5)
                 st.rerun()
             else:
                 st.error("Identifiants incorrects")
     st.stop()
-    
-# --- 4. SI CONNECTÉ : DESIGN NORMAL ---
+
+# --- 5. STYLE CSS GLOBAL (UNE FOIS CONNECTÉ) ---
 st.markdown("""
     <style>
     .stApp { background-color: #FFFFFF !important; }
@@ -84,131 +86,120 @@ st.markdown("""
         background-color: #E2E8F0 !important; 
         border-right: 2px solid #000000 !important; 
     }
-    .st-emotion-cache-6q9sum.ef3ps4o4 { fill: #0026C7 !important; }
+    .planning-frame {
+        position: relative; width: 100%; background: #FFFFFF;
+        height: 1260px; border: 1px solid #000; margin-bottom: 30px;
+        overflow: hidden;
+    }
+    .hour-row-fixed {
+        position: absolute; left: 0; right: 0; height: 45px;
+        display: flex; align-items: center; border-bottom: 1px dashed #CCC;
+    }
+    .calendar-cell-unique { 
+        position: absolute; z-index: 100; border: 2px solid #000000; 
+        text-align: center; font-weight: 900; 
+        display: flex; align-items: center; justify-content: center; 
+        box-shadow: 2px 2px 0px rgba(0,0,0,1); box-sizing: border-box;
+    }
     </style>
 """, unsafe_allow_html=True)
 
-st.sidebar.markdown("""
-    <div style="background: linear-gradient(90deg, #0026C7 0%, #FFFFFF 40%, #FFFFFF 60%, #C70000 100%); 
-                padding: 3px; border-radius: 3px; text-align: center; width: 50%; margin: 0 auto;">
-        <p style="font-size: 9px !important; color: black; margin: 0; letter-spacing: 1px; text-transform: uppercase; font-family: 'Impact';">
-            ⌬ IO
-        </p>
-    </div>
-    <br>
-""", unsafe_allow_html=True
-)
-
-# --- 5. LOGIQUE DE CONNEXION ---
-if not st.session_state["auth"]:
-    st.markdown("### ⌬ Accès IO")
-    with st.form("login_form"):
-        user_input = st.text_input("Identifiant")
-        pw_input = st.text_input("Mot de passe", type="password")
-        submit_auth = st.form_submit_button("Se connecter")
-        
-        if submit_auth:
-            # Remplace par tes vrais identifiants
-            if user_input == "UT" and pw_input == "Azerty123*":
-                st.session_state["auth"] = True
-                st.success("Connexion réussie !")
-                st.rerun()
-            else:
-                st.error("Identifiants incorrects")
-    st.stop() # Arrête le script ici tant qu'on n'est pas connecté
-
-# --- BANDEAU D'ALERTE FORCE (VISIBLE EN MODE SOMBRE) ---
+# --- 6. BANDEAU D'ALERTE ---
 st.markdown("""
-    <div style="
-        background-color: #FFFFFF; 
-        color: #FF0000; 
-        padding: 7px; 
-        border: 4px solid #FF0000; 
-        border-radius: 5px; 
-        text-align: center; 
-        font-weight: bold; 
-        font-size: 0.7rem; 
-        margin-bottom: 5px;
-        box-shadow: 0px 4px 10px rgba(0,0,0,0.5);
-    ">
+    <div style="background-color: #FFFFFF; color: #FF0000; padding: 7px; border: 4px solid #FF0000; border-radius: 5px; text-align: center; font-weight: bold; font-size: 0.7rem; margin-bottom: 5px; box-shadow: 0px 4px 10px rgba(0,0,0,0.5);">
         ⚠️ ATTENTION : PASSEZ VOTRE TÉLÉPHONE EN "MODE CLAIR"<br>
-        <span style="color: #000000; font-size: 0.7rem;">
-            Le mode sombre rend certains textes et plannings invisibles
-        </span>
+        <span style="color: #000000; font-size: 0.7rem;">Le mode sombre rend certains textes invisibles</span>
     </div>
-    """, unsafe_allow_html=True)
+""", unsafe_allow_html=True)
 
-
-# --- CONFIGURATION FIXE ---
-SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1mmPHzEY9p7ohdzvIYvwQOvqmKNa_8VQdZyl4sj1nksw/export?format=csv&gid=0"
-SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxhetuY5QpJEvl-Wv1BMGej5FeW6S3-WDcbS1DwcwUVT-Yt3e8th1XG9pPCcbrwPu5ITw/exec"
-ADMIN_PASSWORD = "1234" 
-
+# --- 7. CONFIGURATION LOCAUX & HORAIRES ---
 LOCAL_CONFIG = {
     "JUP": "#1976D2", "MIN": "#C2185B", "JUN": "#757575",
     "BAC": "#388E3C", "MARS": "#D32F2F", "SAT": "#E65100",
     "CRO": "#A1887F", "NEK": "#C5A000", "PHO": "#DAA520",
     "PERS": "#558B2F", "SAG": "#4A148C"
 }
-
-# Liste arrêtée à 20:00 pile pour supprimer la ligne 20:30
 QUARTS_HEURES = [f"{h:02d}:{m}" for h in range(6, 20) for m in ["00", "30"]] + ["20:00"]
 
-st.set_page_config(page_title="Planning", layout="wide")
+# --- 8. FONCTIONS MOTEUR (SUPABASE) ---
+@st.cache_data(ttl=2)
+def load_data():
+    try:
+        response = supabase.table("planning").select("*").execute()
+        data = pd.DataFrame(response.data)
+        if not data.empty:
+            data['Date_DT'] = pd.to_datetime(data['date'], errors='coerce')
+            data = data.rename(columns={
+                "equipe": "Equipe", "horaire": "Horaire", "local": "Local", 
+                "responsable": "Responsable", "date": "Date"
+            })
+            return data
+        return pd.DataFrame(columns=["id", "Date", "Equipe", "Horaire", "Local", "Responsable", "Date_DT"])
+    except:
+        return pd.DataFrame()
 
-# --- LOGIQUE DONNÉES ---
+def db_add(date, equipe, horaire, local):
+    payload = {"date": str(date), "equipe": equipe.upper(), "horaire": horaire, "local": local, "responsable": ""}
+    supabase.table("planning").insert(payload).execute()
+    st.cache_data.clear()
+
+def db_update(row_id, date, equipe, horaire, local):
+    payload = {"date": str(date), "equipe": equipe.upper(), "horaire": horaire, "local": local}
+    supabase.table("planning").update(payload).eq("id", row_id).execute()
+    st.cache_data.clear()
+
+def db_delete(row_id):
+    supabase.table("planning").delete().eq("id", row_id).execute()
+    st.cache_data.clear()
+
 def extraire_heures(horaire_str):
     try:
         nums = re.findall(r'(\d+)', str(horaire_str))
         if len(nums) >= 4:
-            h_deb = int(nums[0]) + int(nums[1])/60
-            h_fin = int(nums[2]) + int(nums[3])/60
+            h_deb = int(nums) + int(nums)/60
+            h_fin = int(nums) + int(nums)/60
             return h_deb, h_fin
     except: pass
     return None, None
 
-def formater_heure_propre(texte):
-    # Remplace les points ou virgules par des 'h'
-    texte = texte.lower().replace('.', 'h').replace(':', 'h').replace(' ', '')
-    # Si l'utilisateur a juste écrit "08h10h", on essaie de reconstruire "08h00 - 10h00"
-    # C'est une sécurité bonus pour ton Google Sheets
-    return texte
-
-def verifier_conflit(df, date_test, horaire_test, local_test, equipe_test, exclude_idx=None):
+def verifier_conflit(df, date_test, horaire_test, local_test, equipe_test, exclude_id=None):
     h_deb_new, h_fin_new = extraire_heures(horaire_test)
     if h_deb_new is None: return "block", "Format d'heure invalide."
     
-    date_test_dt = pd.to_datetime(date_test)
-    eq_test = str(equipe_test).strip().upper()
+    date_test_str = str(date_test)
     
-    # 1. Vérification local (Bloquant)
-    match_local = df[(df['Date_DT'].dt.date == date_test_dt.date()) & 
-                    (df['Local'].str.strip().str.upper() == local_test.upper())]
-    for idx, row in match_local.iterrows():
-        if exclude_idx is not None and idx == exclude_idx: continue
+    # 1. Conflit Local
+    mask_local = (df['Date'] == date_test_str) & (df['Local'].str.upper() == local_test.upper())
+    if exclude_id: mask_local = mask_local & (df['id'] != exclude_id)
+    
+    for _, row in df[mask_local].iterrows():
         h_deb_ex, h_fin_ex = extraire_heures(row['Horaire'])
         if h_deb_ex is not None and max(h_deb_new, h_deb_ex) < min(h_fin_new, h_fin_ex):
-            return "block", f"ALERTE : Le local {local_test} est déjà pris par {row['Equipe']}."
-
-    # 2. Vérification ÉQUIPE (Doublon autorisé avec confirmation)
-    match_eq = df[(df['Date_DT'].dt.date == date_test_dt.date()) & 
-                  (df['Equipe'].str.strip().str.upper() == eq_test)]
-    for idx, row in match_eq.iterrows():
-        if exclude_idx is not None and idx == exclude_idx: continue
-        h_deb_ex, h_fin_ex = extraire_heures(row['Horaire'])
-        if h_deb_ex is not None and max(h_deb_new, h_deb_ex) < min(h_fin_new, h_fin_ex):
-            return "warn", f"DOUBLON : L'équipe {eq_test} est déjà sur {row['Simu']} à cette heure."
+            return "block", f"ALERTE : Le local {local_test} est déjà pris."
 
     return "ok", ""
 
-@st.cache_data(ttl=2)
-def load_data():
-    try:
-        url = f"{SHEET_CSV_URL}&v={time.time()}"
-        data = pd.read_csv(url)
-        data['Date_DT'] = pd.to_datetime(data['Date'], dayfirst=True, errors='coerce')
-        return data.dropna(subset=['Date_DT', 'Horaire'])
-    except: return pd.DataFrame()
+# --- 9. SIDEBAR & NAVIGATION ---
+st.sidebar.markdown('<div style="text-align: center; font-family: \'Impact\'; font-size: 15px;">⌬ IO</div>', unsafe_allow_html=True)
+
+menus = ["📅 Planning", "🖥️ Supervision", "🔍 Rechercher", "📊 Statistiques"]
+if st.session_state["role"] == "Animateur":
+    menus += ["🎯 Assignation Responsables", "🔐 Administration"]
+
+menu = st.sidebar.radio("MENU", menus)
+
+st.sidebar.divider()
+annee_sel = st.sidebar.selectbox("Année",, index=1)
+semaine_sel = st.sidebar.selectbox("Semaine", range(1, 54), index=datetime.now().isocalendar()-1)
+local_sel = st.sidebar.selectbox("Local", list(LOCAL_CONFIG.keys()))
+jours_fr = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi"]
+choix_j_global = st.sidebar.selectbox("Jour", jours_fr, index=min(datetime.now().weekday(), 4))
+mode_vue = st.sidebar.segmented_control("Format", ["Semaine", "Jour"], default="Jour")
+
+# Calcul des dates de la semaine
+monday = (datetime(annee_sel, 1, 4) - timedelta(days=datetime(annee_sel, 1, 4).weekday())) + timedelta(weeks=semaine_sel-1)
+week_days = [monday + timedelta(days=i) for i in range(5)]
+d_active = week_days[jours_fr.index(choix_j_global)]
 
 # --- INTERFACE ---
 df = load_data()
