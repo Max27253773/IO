@@ -581,7 +581,7 @@ elif menu == "🔐 Administration":
         with tab3:
             if not df_filtre_admin.empty:
                 t_del_idx = st.selectbox("Créneau à supprimer", df_filtre_admin.index, 
-                                       format_func=lambda i: f"{df.loc[i,'Date_DT'].strftime('%d/%m')} | {df.loc[i,'Equipe']} - {df.loc[i,'Local']}")
+                                       format_func=lambda i: f"{df.loc[i,'Date_DT'].strftime('%d/%m')} | {df.loc[i,'Equipe']} - {df.loc[i,'Local']} ({df.loc[i,'Horaire']})")
                 
                 if st.button("❌ Supprimer définitivement", disabled=not st.checkbox("Confirmer la suppression")):
                     try:
