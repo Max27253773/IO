@@ -119,7 +119,7 @@ st.sidebar.divider()
 maintenant = datetime.now()
 
 # ON MET LES LISTES DIRECTEMENT DANS LES SELECTBOX POUR ÉVITER LES SYNTAX ERRORS
-annee_sel = st.sidebar.selectbox("Année",, index=1)
+annee_sel = st.sidebar.selectbox("Année", index=1)
 semaine_sel = st.sidebar.selectbox("Semaine", list(range(1, 54)), index=maintenant.isocalendar()-1)
 choix_j = st.sidebar.selectbox("Jour", ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi"], index=min(maintenant.weekday(), 4))
 local_sel = st.sidebar.selectbox("Local", list(LOCAL_CONFIG.keys()))
