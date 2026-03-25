@@ -537,10 +537,10 @@ elif menu == "🔐 Administration":
                             # --- REMPLACEMENT ICI : SUPABASE AU LIEU DE REQUESTS ---
                             try:
                                 supabase.table("Planning").insert({
-                                    "Date_DT": d_add.strftime("%Y-%m-%d"),
-                                    "Equipe": eq_add.upper(),
-                                    "Horaire": hr_add,
-                                    "Local": lc_add
+                                    "date_DT": d_add.strftime("%Y-%m-%d"),
+                                    "equipe": eq_add.upper(),
+                                    "horaire": hr_add,
+                                    "local": lc_add
                                 }).execute()
                                 st.success("✅ Réservation validée !")
                                 time.sleep(1)
@@ -572,10 +572,10 @@ elif menu == "🔐 Administration":
             if not df_filtre_admin.empty:
                 idx_mod = st.selectbox("Sélectionner le créneau", df_filtre_admin.index, format_func=lambda i: f"{df.loc[i,'Date']} | {df.loc[i,'Equipe']} ({df.loc[i,'Horaire']})")
                 with st.form("modifier_form"):
-                    ed = st.date_input("Date", value=df.loc[idx_mod,'Date_DT'])
-                    ee = st.text_input("Equipe", df.loc[idx_mod,'Equipe'])
-                    eh = st.text_input("Horaire", df.loc[idx_mod,'Horaire'])
-                    es = st.selectbox("Local", list(LOCAL_CONFIG.keys()), index=list(LOCAL_CONFIG.keys()).index(str(df.loc[idx_mod,'Local']).strip().upper()))
+                    ed = st.date_input("date", value=df.loc[idx_mod,'Date_DT'])
+                    ee = st.text_input("equipe", df.loc[idx_mod,'Equipe'])
+                    eh = st.text_input("horaire", df.loc[idx_mod,'Horaire'])
+                    es = st.selectbox("local", list(LOCAL_CONFIG.keys()), index=list(LOCAL_CONFIG.keys()).index(str(df.loc[idx_mod,'Local']).strip().upper()))
                     if st.form_submit_button("Vérifier et Enregistrer"):
                         status, msg = verifier_conflit(df, ed, eh, es, ee, exclude_idx=idx_mod)
                         
