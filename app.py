@@ -545,19 +545,13 @@ elif menu == "🔐 Administration":
                             st.warning(f"⚠️ {msg}")
                             st.session_state['confirm_add_doublon'] = {"date":d_add, "eq":eq_add, "hr":hr_add, "lc":lc_add}
                         else:
-                            # --- REMPLACEMENT ICI : SUPABASE AU LIEU DE REQUESTS ---
-                            try:
-                                supabase.table("Planning").insert({
-                                    "date_DT": d_add.strftime("%Y-%m-%d"),
-                                    "equipe": eq_add.upper(),
-                                    "horaire": hr_add,
-                                    "local": lc_add
-                                }).execute()
+                           try:
+                                db_add(d_add, eq_add, hr_add, lc_add)
                                 st.success("✅ Réservation validée !")
                                 time.sleep(1)
                                 st.rerun()
                             except Exception as e:
-                                st.error(f"Erreur Supabase : {e}")
+                                st.error(f"Erreur : {e}")
                     else:
                         st.warning("Veuillez remplir tous les champs.")
 
@@ -609,12 +603,24 @@ elif menu == "🔐 Administration":
             else:
                 st.warning("Aucun créneau à modifier cette semaine.")
 
-        with tab3:
+         with tab3:
             if not df_filtre_admin.empty:
-                t_del = st.selectbox("Créneau à supprimer", df_filtre_admin.index, format_func=lambda i: f"{df.loc[i,'Date']} | {df.loc[i,'Equipe']} ({df.loc[i,'Horaire']}) {df.loc[i,'Local']}")
-                if st.button("❌ Supprimer définitivement", disabled=not st.checkbox("Confirmer")):
-                    requests.post(SCRIPT_URL, data=json.dumps({"action":"delete","row":int(t_del)+2}))
-                    st.success("🗑️ Supprimé !"), time.sleep(1), st.rerun()
+                # On récupère l'ID réel de la ligne Supabase
+                t_del_idx = st.selectbox("Créneau à supprimer", df_filtre_admin.index, 
+                                        format_func=lambda i: f"{df.loc[i,'Date_DT'].strftime('%d/%m')} | {df.loc[i,'Equipe']}")
+                real_id = df.loc[t_del_idx, 'id'] 
+                
+                if st.button("❌ Supprimer définitivement", disabled=not st.checkbox("Confirmer la suppression")):
+                    db_delete(real_id) # Utilise ta fonction Supabase
+                    st.success("🗑️ Supprimé !")
+                    time.sleep(1)
+                    st.rerun()
+        
+        if st.button("❌ Supprimer définitivement", disabled=not st.checkbox("Confirmer la suppression")):
+            db_delete(real_id) # Utilise ta fonction Supabase
+            st.success("🗑️ Supprimé !")
+            time.sleep(1)
+            st.rerun()
     else:
         # Message si l'utilisateur n'est pas admin
         st.error("🔒 Accès réservé. Veuillez saisir le mot de passe dans la barre latérale pour accéder à la gestion.")
