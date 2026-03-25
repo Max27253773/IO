@@ -117,7 +117,7 @@ st.sidebar.divider()
 
 # 2. On définit TOUTES les variables avant de les utiliser dans les selectbox
 maintenant = datetime.now()
-liste_annees = # <-- On la définit bien ici
+liste_annees =
 liste_semaines = list(range(1, 54))
 jours_fr = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi"]
 
