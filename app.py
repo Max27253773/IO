@@ -159,7 +159,7 @@ mode_vue = st.sidebar.segmented_control("Format", ["Semaine", "Jour"], default="
 # Calcul de la date précise
 monday = (datetime(annee_sel, 1, 4) - timedelta(days=datetime(annee_sel, 1, 4).weekday())) + timedelta(weeks=semaine_sel-1)
 week_days = [monday + timedelta(days=i) for i in range(5)]
-d_active = week_days[jours_fr.index(choix_j)]
+d_active = week_days[jours_fr_liste.index(choix_j)]
 
 # --- 7. CSS & DESIGN ---
 current_color = LOCAL_CONFIG.get(local_sel, "#333")
