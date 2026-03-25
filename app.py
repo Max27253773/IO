@@ -220,7 +220,9 @@ elif menu == "📊 Statistiques":
 elif menu == "🎯 Assignation Responsables" and st.session_state["role"] == "Animateur":
     st.title("🎯 Assignation des Responsables")
     ANIMATEURS = ["MAX", "ALEKS", "ALEX", "MAEL", "ELIES", "LISE", "SIMON", "JOSS"]
-    df_week = df[df['Date_DT'].dt.isocalendar().week == semaine_sel].sort_values(['Date', 'Horaire'])
+    
+    df['Date_DT'] = pd.to_datetime(df['Date_DT'], errors='coerce')
+    df_week = df[df['Date_DT'].dt.isocalendar().week == semaine_sel].sort_values(['Date_DT', 'Horaire'])
     
     for _, row in df_week.iterrows():
         c1, c2 = st.columns()
