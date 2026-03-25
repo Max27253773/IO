@@ -118,6 +118,27 @@ LOCAL_CONFIG = {
 }
 QUARTS_HEURES = [f"{h:02d}:{m}" for h in range(6, 21) for m in ["00", "30"]]
 
+# --- BANDEAU D'ALERTE FORCE (VISIBLE EN MODE SOMBRE) ---
+st.markdown("""
+    <div style="
+        background-color: #FFFFFF; 
+        color: #FF0000; 
+        padding: 7px; 
+        border: 4px solid #FF0000; 
+        border-radius: 5px; 
+        text-align: center; 
+        font-weight: bold; 
+        font-size: 0.7rem; 
+        margin-bottom: 5px;
+        box-shadow: 0px 4px 10px rgba(0,0,0,0.5);
+    ">
+        ⚠️ ATTENTION : PASSEZ VOTRE TÉLÉPHONE EN "MODE CLAIR"<br>
+        <span style="color: #000000; font-size: 0.7rem;">
+            Le mode sombre rend certains textes et plannings invisibles
+        </span>
+    </div>
+    """, unsafe_allow_html=True)
+
 # --- 7. INTERFACE ---
 df = load_data()
 df['Date_DT'] = pd.to_datetime(df['Date_DT'], errors='coerce')
