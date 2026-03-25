@@ -19,17 +19,28 @@ st.set_page_config(page_title="IO Planning", layout="wide", initial_sidebar_stat
 @st.cache_data(ttl=2)
 def load_data():
     try:
-        # Changement ici : "Planning" au lieu de "planning"
         response = supabase.table("Planning").select("*").execute()
         data = pd.DataFrame(response.data)
         if not data.empty:
-            data['date_DT'] = pd.to_datetime(data['date'], errors='coerce')
-            data = data.rename(columns={
-                "equipe": "equipe", "horaire": "horaire", "local": "local", 
-                "responsable": "responsable", "date": "date"
-            })
+            # On harmonise le nom de la colonne date venant de Supabase
+            if 'date' in data.columns:
+                data = data.rename(columns={'date': 'Date_DT'})
+            elif 'date_dt' in data.columns:
+                data = data.rename(columns={'date_dt': 'Date_DT'})
+                
+            data['Date_DT'] = pd.to_datetime(data['Date_DT'], errors='coerce')
+            
+            # Harmonisation des autres colonnes pour correspondre au reste du code
+            cols_map = {
+                "equipe": "Equipe", "horaire": "Horaire", 
+                "local": "Local", "responsable": "Responsable"
+            }
+            # On ne renomme que si la colonne en minuscule existe
+            for old_col, new_col in cols_map.items():
+                if old_col in data.columns:
+                    data = data.rename(columns={old_col: new_col})
             return data
-        return pd.DataFrame(columns=["id", "date", "equipe", "horaire", "local", "responsable", "date_DT"])
+        return pd.DataFrame(columns=["id", "Date_DT", "Equipe", "Horaire", "Local", "Responsable"])
     except Exception as e:
         st.error(f"Erreur de chargement : {e}")
         return pd.DataFrame()
