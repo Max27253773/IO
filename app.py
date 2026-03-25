@@ -516,13 +516,10 @@ elif menu == "🎯 Assignation Responsables":
 elif menu == "🔐 Administration":
     st.markdown("<h1>⚙️ Gestion des Réservations</h1>", unsafe_allow_html=True)
     
-    # Plus besoin de 'pwd = st.sidebar.text_input...' ici !
-    # On utilise directement la variable 'is_admin' définie plus haut
-    
     if is_admin:
         tab1, tab2, tab3 = st.tabs(["➕ Ajouter", "📝 Modifier", "🗑️ Supprimer"])
         
-        # Le reste de ton code d'administration (df_filtre_admin, etc.) continue ici...
+        # Filtrage des données pour la semaine sélectionnée
         df_filtre_admin = df[
             (df['Date_DT'].dt.isocalendar().week == semaine_sel) & 
             (df['Date_DT'].dt.year == annee_sel)
@@ -541,87 +538,58 @@ elif menu == "🔐 Administration":
                         
                         if status == "block":
                             st.error(f"❌ {msg}")
-                        elif status == "warn":
-                            st.warning(f"⚠️ {msg}")
-                            st.session_state['confirm_add_doublon'] = {"date":d_add, "eq":eq_add, "hr":hr_add, "lc":lc_add}
                         else:
-                           try:
+                            try:
                                 db_add(d_add, eq_add, hr_add, lc_add)
                                 st.success("✅ Réservation validée !")
                                 time.sleep(1)
                                 st.rerun()
                             except Exception as e:
-                                st.error(f"Erreur : {e}")
+                                st.error(f"Erreur Supabase : {e}")
                     else:
                         st.warning("Veuillez remplir tous les champs.")
 
-        # --- ICI ON EST HORS DU FORMULAIRE (aligné sur le 'with') ---
-        if st.session_state.get('confirm_add_doublon'):
-            st.info("ℹ️ Cliquez ci-dessous pour forcer l'ajout en doublon.")
-            if st.button("👍 Confirmer le doublon volontaire", key="confirm_add"):
-                conf = st.session_state['confirm_add_doublon']
-                requests.post(SCRIPT_URL, data=json.dumps({
-                    "action":"add",
-                    "date":conf['date'].strftime("%d/%m/%Y"),
-                    "equipe":conf['eq'].upper(),
-                    "horaire":conf['hr'],
-                    "local":conf['lc']
-                }))
-                del st.session_state['confirm_add_doublon'] # On nettoie la session
-                st.success("✅ Doublon ajouté !"), time.sleep(1), st.rerun()
-            
-            else:
-                st.warning("Veuillez remplir tous les champs.")
-
         with tab2:
             if not df_filtre_admin.empty:
-                idx_mod = st.selectbox("Sélectionner le créneau", df_filtre_admin.index, format_func=lambda i: f"{df.loc[i,'Date']} | {df.loc[i,'Equipe']} ({df.loc[i,'Horaire']})")
+                # Sélection par ID pour être précis avec Supabase
+                idx_sel = st.selectbox("Sélectionner le créneau", df_filtre_admin.index, 
+                                     format_func=lambda i: f"{df.loc[i,'Date_DT'].strftime('%d/%m')} | {df.loc[i,'Equipe']} ({df.loc[i,'Horaire']})")
+                
                 with st.form("modifier_form"):
-                    ed = st.date_input("date", value=df.loc[idx_mod,'Date_DT'])
-                    ee = st.text_input("equipe", df.loc[idx_mod,'Equipe'])
-                    eh = st.text_input("horaire", df.loc[idx_mod,'Horaire'])
-                    es = st.selectbox("local", list(LOCAL_CONFIG.keys()), index=list(LOCAL_CONFIG.keys()).index(str(df.loc[idx_mod,'Local']).strip().upper()))
-                    if st.form_submit_button("Vérifier et Enregistrer"):
-                        status, msg = verifier_conflit(df, ed, eh, es, ee, exclude_idx=idx_mod)
-                        
-                        if status == "block":
-                            st.error(f"❌ MODIFICATION IMPOSSIBLE : {msg}")
-                        elif status == "warn":
-                            st.warning(f"⚠️ {msg}")
-                            st.session_state['confirm_mod_doublon'] = {"row":int(idx_mod)+2, "date":ed, "eq":ee, "hr":eh, "sm":es}
-                        else:
-                            requests.post(SCRIPT_URL, data=json.dumps({"action":"update","row":int(idx_mod)+2,"date":ed.strftime("%d/%m/%Y"),"equipe":ee.upper(),"horaire":eh,"local":es}))
-                            st.success("📝 Modification enregistrée !"), time.sleep(1), st.rerun()
-
-                # Bouton de confirmation de modification pour l'admin
-                if st.session_state.get('confirm_mod_doublon'):
-                    if st.button("👍 Confirmer la modification en doublon"):
-                        conf = st.session_state['confirm_mod_doublon']
-                        requests.post(SCRIPT_URL, data=json.dumps({"action":"update","row":conf['row'],"date":conf['date'].strftime("%d/%m/%Y"),"equipe":conf['eq'].upper(),"horaire":conf['hr'],"local":conf['sm']}))
-                        del st.session_state['confirm_mod_doublon']
-                        st.success("📝 Modification forcée effectuée !"), time.sleep(1), st.rerun()
+                    ed = st.date_input("Date", value=df.loc[idx_sel,'Date_DT'])
+                    ee = st.text_input("Equipe", df.loc[idx_sel,'Equipe'])
+                    eh = st.text_input("Horaire", df.loc[idx_sel,'Horaire'])
+                    es = st.selectbox("Local", list(LOCAL_CONFIG.keys()), 
+                                    index=list(LOCAL_CONFIG.keys()).index(str(df.loc[idx_sel,'Local']).strip().upper()))
+                    
+                    if st.form_submit_button("Enregistrer les modifications"):
+                        try:
+                            # Utilisation de l'ID unique de la ligne
+                            row_id = df.loc[idx_sel, 'id']
+                            db_update(row_id, ed, ee, eh, es)
+                            st.success("📝 Modification enregistrée !")
+                            time.sleep(1)
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Erreur de modification : {e}")
             else:
                 st.warning("Aucun créneau à modifier cette semaine.")
 
-         with tab3:
+        with tab3:
             if not df_filtre_admin.empty:
-                # On récupère l'ID réel de la ligne Supabase
                 t_del_idx = st.selectbox("Créneau à supprimer", df_filtre_admin.index, 
-                                        format_func=lambda i: f"{df.loc[i,'Date_DT'].strftime('%d/%m')} | {df.loc[i,'Equipe']}")
-                real_id = df.loc[t_del_idx, 'id'] 
+                                       format_func=lambda i: f"{df.loc[i,'Date_DT'].strftime('%d/%m')} | {df.loc[i,'Equipe']} - {df.loc[i,'Local']}")
                 
                 if st.button("❌ Supprimer définitivement", disabled=not st.checkbox("Confirmer la suppression")):
-                    db_delete(real_id) # Utilise ta fonction Supabase
-                    st.success("🗑️ Supprimé !")
-                    time.sleep(1)
-                    st.rerun()
-        
-        if st.button("❌ Supprimer définitivement", disabled=not st.checkbox("Confirmer la suppression")):
-            db_delete(real_id) # Utilise ta fonction Supabase
-            st.success("🗑️ Supprimé !")
-            time.sleep(1)
-            st.rerun()
+                    try:
+                        row_id = df.loc[t_del_idx, 'id']
+                        db_delete(row_id)
+                        st.success("🗑️ Supprimé !")
+                        time.sleep(1)
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Erreur de suppression : {e}")
+            else:
+                st.warning("Aucun créneau à supprimer cette semaine.")
     else:
-        # Message si l'utilisateur n'est pas admin
-        st.error("🔒 Accès réservé. Veuillez saisir le mot de passe dans la barre latérale pour accéder à la gestion.")
-        st.info("L'administration permet d'ajouter, modifier ou supprimer des créneaux de manière avancée.")
+        st.error("🔒 Accès réservé. Veuillez saisir le mot de passe dans la barre latérale.")
