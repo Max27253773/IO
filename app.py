@@ -402,61 +402,39 @@ text_on_color = "#000000" if local_sel in ["PHOBOS", "NEKKAR"] else "#FFFFFF"
 # --- CSS COMPLET ---
 st.markdown(f"""
     <style>
-    /* Fond et Sidebar */
     .stApp {{ background-color: #FFFFFF !important; }}
-    [data-testid="stSidebar"] {{ 
-        background-color: #f8f9fa !important; 
-        border-right: 1px solid #eee !important; 
-    }}
-    h1 {{ font-size: 1.8rem !important; font-weight: 900 !important; color: #333 !important; }}
+    [data-testid="stSidebar"] {{ background-color: #E2E8F0 !important; border-right: 2px solid #000000 !important; }}
+    h1 {{ font-size: 1.8rem !important; font-weight: 900 !important; color: #000000 !important; }}
     
-    /* Planning */
+    /* Mode Jour : Cadre ajusté pour finir à 20h00 */
     .planning-frame {{
         position: relative; width: 100%; background: #FFFFFF;
-        height: 1260px; border: 1px solid #eee; margin-bottom: 30px;
-        overflow: hidden; border-radius: 15px;
+        height: 1260px; /* Hauteur exacte pour 6h-20h (14h * 90px) */
+        border: 1px solid #000; margin-bottom: 30px;
+        overflow: hidden;
     }}
     .hour-row-fixed {{
         position: absolute; left: 0; right: 0; height: 45px;
-        display: flex; align-items: center; border-bottom: 1px dashed #eee;
+        display: flex; align-items: center; border-bottom: 1px dashed #CCC; box-sizing: border-box;
     }}
+    
+    /* Mode Semaine : Grille flexible */
+    .slot-container-week {{ position: relative; width: 100%; height: 45px; box-sizing: border-box; }}
+    .grid-line-hour {{ border-bottom: 2px solid #333333 !important; height: 45px; box-sizing: border-box; }}
+    .grid-line-min {{ border-bottom: 1px dashed #777777 !important; height: 45px; box-sizing: border-box; }}
+
     .calendar-cell-unique {{ 
-        position: absolute; z-index: 100; border-radius: 8px;
-        color: {text_on_color} !important; text-align: center; font-weight: 600; 
+        position: absolute; z-index: 100; border: 2px solid #000000; 
+        color: {text_on_color} !important; text-align: center; font-weight: 900; 
         display: flex; align-items: center; justify-content: center; 
-        box-shadow: 0 4px 6px rgba(0,0,0,0.05); box-sizing: border-box;
+        box-shadow: 2px 2px 0px rgba(0,0,0,1); box-sizing: border-box;
     }}
-
-    /* --- AJOUTS RÉCENTS POUR LE DESIGN ÉPURÉ --- */
-
-    /* 1. Style du Segmented Control (Jour/Semaine) */
-    div[data-testid="stSegmentedControl"] {{
-        background-color: #eee !important;
-        border-radius: 12px !important;
-        padding: 4px !important;
-    }}
-    div[data-testid="stSegmentedControl"] button {{
-        border: none !important;
-        background-color: transparent !important;
-        color: #666 !important;
-    }}
-    div[data-testid="stSegmentedControl"] button[aria-checked="true"] {{
-        background-color: white !important;
-        color: black !important;
-        font-weight: 600 !important;
-        box-shadow: 0px 3px 8px rgba(0,0,0,0.08) !important;
-        border-radius: 10px !important;
-    }}
-
-    /* 2. Style des Selectbox (Année, Semaine, Local) */
-    div[data-baseweb="select"] > div {{
-        background-color: #FFFFFF !important;
-        border-radius: 10px !important;
-        border: 1px solid #eee !important;
-    }}
-
+    
+    .stButton button {{ width: 100% !important; font-weight: bold !important; }}
     </style>
     """, unsafe_allow_html=True)
+
+df_view = df[df['Local'].str.strip().str.upper() == local_sel.upper()]
 
 # --- FILTRAGE SÉCURISÉ ---
 if not df.empty:
