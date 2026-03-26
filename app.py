@@ -241,6 +241,7 @@ df['Date_DT'] = pd.to_datetime(df['Date_DT'], errors='coerce')
 # --- 7.1. CONFIGURATION DU MENU ---
 opts = ["Planning", "Supervision", "Rechercher", "Stats"]
 icons = ["calendar3", "display", "search", "bar-chart"]
+st.markdown('<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">', unsafe_allow_html=True)
 
 # Ajout des options Animateur
 if st.session_state.get("role") == "Animateur":
