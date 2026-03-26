@@ -260,7 +260,7 @@ with st.sidebar:
         default_index=0,
         styles={
             "container": {"padding": "5!important", "background-color": "transparent"},
-            "icon": {"color": "#666", "font-size": "18px"}, 
+            "icon": {"color": "#444", "font-size": "18px"}, 
             "nav-link": {
                 "font-size": "15px", 
                 "text-align": "left", 
@@ -404,7 +404,7 @@ text_on_color = "#000000" if local_sel in ["PHOBOS", "NEKKAR"] else "#FFFFFF"
 st.markdown(f"""
     <style>
     .stApp {{ background-color: #FFFFFF !important; }}
-    [data-testid="stSidebar"] {{ background-color: #E2E8F0 !important; border-right: 2px solid #000000 !important; }}
+    [data-testid="stSidebar"] {{ background-color: #0C6CEB !important; border-right: 2px solid #000000 !important; }}
     h1 {{ font-size: 1.8rem !important; font-weight: 900 !important; color: #000000 !important; }}
     
     /* Mode Jour : Cadre ajusté pour finir à 20h00 */
