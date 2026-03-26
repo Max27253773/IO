@@ -297,8 +297,6 @@ with st.sidebar:
             elif admin_key != "":
                 st.error("Incorrect")
 
-st.sidebar.divider()
-
 # --- CALCUL AUTOMATIQUE DATE/SEMAINE ---
 maintenant = datetime.now()
 annee_actuelle = maintenant.year
@@ -311,7 +309,7 @@ jours_fr_liste = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi"]
 choix_j_global = st.sidebar.selectbox("Jour", jours_fr_liste, index=min(maintenant.weekday(), 4) if annee_sel == maintenant.year else 0)
 local_sel = st.sidebar.selectbox("Local", list(LOCAL_CONFIG.keys()))
 
-st.sidebar.divider()
+
 st.sidebar.subheader("📱 Options d'affichage")
 mode_vue = st.sidebar.segmented_control("Format", ["Semaine", "Jour"], default="Jour")
 
