@@ -402,58 +402,48 @@ text_on_color = "#000000" if local_sel in ["PHOBOS", "NEKKAR"] else "#FFFFFF"
 
 # --- CSS COMPLET ---
 st.markdown(f"""
-    <style>
+<style>
+    /* Fond et Sidebar */
     .stApp {{ background-color: #FFFFFF !important; }}
-    [data-testid="stSidebar"] {{ background-color: #E2E8F0 !important; border-right: 2px solid #000000 !important; }}
-    h1 {{ font-size: 1.8rem !important; font-weight: 900 !important; color: #000000 !important; }}
-    
-    /* Mode Jour : Cadre ajusté pour finir à 20h00 */
-    .planning-frame {{
-        position: relative; width: 100%; background: #FFFFFF;
-        height: 1260px; /* Hauteur exacte pour 6h-20h (14h * 90px) */
-        border: 1px solid #000; margin-bottom: 30px;
-        overflow: hidden;
+    [data-testid="stSidebar"] {{ 
+        background-color: #f8f9fa !important; 
+        border-right: 1px solid #eee !important; 
     }}
-    .hour-row-fixed {{
-        position: absolute; left: 0; right: 0; height: 45px;
-        display: flex; align-items: center; border-bottom: 1px dashed #CCC; box-sizing: border-box;
-    }}
-    
-    /* Mode Semaine : Grille flexible */
-    .slot-container-week {{ position: relative; width: 100%; height: 45px; box-sizing: border-box; }}
-    .grid-line-hour {{ border-bottom: 2px solid #333333 !important; height: 45px; box-sizing: border-box; }}
-    .grid-line-min {{ border-bottom: 1px dashed #777777 !important; height: 45px; box-sizing: border-box; }}
 
-    .calendar-cell-unique {{ 
-        position: absolute; z-index: 100; border: 2px solid #000000; 
-        color: {text_on_color} !important; text-align: center; font-weight: 900; 
-        display: flex; align-items: center; justify-content: center; 
-        box-shadow: 2px 2px 0px rgba(0,0,0,1); box-sizing: border-box;
-    }}
-    
-    .stButton button {{ width: 100% !important; font-weight: bold !important; }}
-    </style>
-    """, unsafe_allow_html=True)
-
-    /* Encadré gris clair pour le sélecteur d'affichage */
-    div[data-testid="stSegmentedControl"] {
-        background-color: #f0f2f6 !important; /* Le fond gris clair */
+    /* 1. Encadré gris clair pour le sélecteur d'affichage (Segmented Control) */
+    div[data-testid="stSegmentedControl"] {{
+        background-color: #f0f2f6 !important; 
         border-radius: 12px !important;
         padding: 4px !important;
-    }
-    
-    /* Le bouton sélectionné devient la bulle blanche cliquable */
-    div[data-testid="stSegmentedControl"] button[aria-checked="true"] {
+    }}
+
+    /* 2. La bulle blanche pour l'option sélectionnée */
+    div[data-testid="stSegmentedControl"] button[aria-checked="true"] {{
         background-color: white !important;
         color: black !important;
         border-radius: 9px !important;
         box-shadow: 0px 2px 6px rgba(0,0,0,0.05) !important;
-    }
-    
-    /* On retire les bordures par défaut pour le look épuré */
-    div[data-testid="stSegmentedControl"] button {
+    }}
+
+    /* 3. Nettoyage des bordures par défaut */
+    div[data-testid="stSegmentedControl"] button {{
         border: none !important;
-    }
+    }}
+
+    /* Vos autres styles (planning-frame, etc.) */
+    .planning-frame {{
+        position: relative; width: 100%; background: #FFFFFF;
+        height: 1260px; border: 1px solid #eee; margin-bottom: 30px;
+        overflow: hidden; border-radius: 15px;
+    }}
+    .calendar-cell-unique {{ 
+        position: absolute; z-index: 100; border-radius: 8px;
+        color: {text_on_color} !important; text-align: center; font-weight: 600; 
+        display: flex; align-items: center; justify-content: center; 
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05); box-sizing: border-box;
+    }}
+</style>
+""", unsafe_allow_html=True)
 
 df_view = df[df['Local'].str.strip().str.upper() == local_sel.upper()]
 
