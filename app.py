@@ -234,35 +234,70 @@ st.markdown("""
     </div>
     """, unsafe_allow_html=True)
 
-# --- 7. INTERFACE ---
-df = load_data()
-df['Date_DT'] = pd.to_datetime(df['Date_DT'], errors='coerce')
+# --- 7. NOUVELLE SIDEBAR ERGONOMIQUE ---
+# Initialiser l'état de la sidebar si besoin
+if "expanded" not in st.session_state:
+    st.session_state["expanded"] = False
 
-# --- 7.1. DÉFINITION DE LA LISTE DE BASE ---
-# Accessible à tout le monde
-menus_de_base = ["📅 Planning", "🖥️ Supervision", "🔍 Rechercher", "📊 Statistiques"]
+# CSS pour la sidebar transparente et les icônes
+st.markdown(f"""
+    <style>
+    [data-testid="stSidebar"] {{
+        background: rgba(255, 255, 255, 0.5) !important;
+        backdrop-filter: blur(15px) !important;
+        border-right: 1px solid rgba(0,0,0,0.05) !important;
+    }}
+    /* On cache le menu radio standard de Streamlit */
+    [data-testid="stSidebarNav"] {{display: none;}}
+    </style>
+""", unsafe_allow_html=True)
 
-# --- 7.2. LOGIQUE RÉSERVÉE À L'ANIMATEUR ---
-if st.session_state.get("role") == "Animateur":
-    # Insertion des options supplémentaires dans la liste
-    menus_de_base.insert(4, "🎯 Assignation Responsables")
-    menus_de_base.insert(5, "🔐 Administration")
-
-    # Affichage du menu principal
-    menu = st.sidebar.radio("MENU", menus_de_base)
-
-    # BLOC ACCÈS ADMIN (Visible uniquement pour l'Animateur)
-    st.sidebar.markdown("---")
-    st.sidebar.title("🔐 Accès ADMIN")
-    admin_key = st.sidebar.text_input("Mot de passe", type="password", key="global_pwd")
-    ADMIN_PASSWORD = "1234"
+with st.sidebar:
+    # Bouton de déploiement épuré
+    if st.button("☰", key="toggle", help="Agrandir / Réduire"):
+        st.session_state["expanded"] = not st.session_state["expanded"]
     
-    # Vérification de la clé
-    is_admin = (admin_key == ADMIN_PASSWORD)
-    if is_admin:
-        st.sidebar.success("Mode Administrateur Actif")
-    elif admin_key != "":
-        st.sidebar.error("Mot de passe incorrecte")
+    # Définition des options selon le rôle
+    options = ["Planning", "Supervision", "Rechercher", "Stats"]
+    icons = ["calendar3", "display", "search", "bar-chart"]
+    
+    if st.session_state.get("role") == "Animateur":
+        options += ["Assignation", "Administration"]
+        icons += ["person-check", "gear"]
+
+    # Affichage du menu option_menu (Style Bulles Blanches)
+    menu = option_menu(
+        menu_title=None,
+        options=options,
+        icons=icons,
+        default_index=0,
+        # Si expanded est False, on réduit la sidebar visuellement par CSS ou via le style de l'icône
+        styles={
+            "container": {"padding": "0!important", "background-color": "transparent"},
+            "icon": {"color": "#444", "font-size": "20px"}, 
+            "nav-link": {
+                "font-size": "14px" if st.session_state["expanded"] else "0px", # Cache le texte si réduit
+                "text-align": "left", "margin":"10px", "border-radius": "15px", "color": "#444"
+            },
+            "nav-link-selected": {"background-color": "white", "color": "black", "box-shadow": "0px 4px 12px rgba(0,0,0,0.08)"},
+        }
+    )
+    
+    # Bouton Déconnexion en bas
+    st.divider()
+    if st.button("Déconnexion", use_container_width=True):
+        st.session_state["auth"] = False
+        st.rerun()
+
+# IMPORTANT : Adapter la variable 'menu' pour ton code existant
+# Pour que tes IF/ELIF plus bas fonctionnent, on remet les émojis si nécessaire
+menu_final = menu
+if menu == "Planning": menu_final = "📅 Planning"
+elif menu == "Supervision": menu_final = "🖥️ Supervision"
+elif menu == "Rechercher": menu_final = "🔍 Rechercher"
+elif menu == "Stats": menu_final = "📊 Statistiques"
+elif menu == "Assignation": menu_final = "🎯 Assignation Responsables"
+elif menu == "Administration": menu_final = "🔐 Administration"
 
 else:
     # --- 7.3. AFFICHAGE POUR L'UTILISATEUR SIMPLE (UT) ---
