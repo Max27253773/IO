@@ -359,26 +359,48 @@ jours_fr_liste = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi"]
 choix_j_global = st.sidebar.selectbox("Jour", jours_fr_liste, index=min(maintenant.weekday(), 4) if annee_sel == maintenant.year else 0)
 local_sel = st.sidebar.selectbox("Local", list(LOCAL_CONFIG.keys()))
 
-# --- OPTIONS D'AFFICHAGE ---
-st.sidebar.markdown("<br>", unsafe_allow_html=True)
+# --- OPTIONS D'AFFICHAGE (STYLE "BULLE BLANCHE") ---
+with st.sidebar:
+    st.markdown("<br>", unsafe_allow_html=True) # Espacement
 
-# Titre avec icône Bootstrap
-st.sidebar.markdown("""
-    <div style='display: flex; align-items: center; margin-left: 5px; margin-bottom: 8px;'>
-        <i class="bi bi-phone" style="font-size: 16px; color: #444; margin-right: 10px;"></i>
-        <span style="color: #444; font-size: 13px; font-weight: 600; font-family: sans-serif; letter-spacing: 0.5px;">
-            OPTIONS D'AFFICHAGE
-        </span>
-    </div>
-""", unsafe_allow_html=True)
+    # Titre stylisé avec icône
+    st.markdown("""
+        <div style='display: flex; align-items: center; margin-left: 5px; margin-bottom: 15px;'>
+            <i class="bi bi-phone" style="font-size: 16px; color: #666; margin-right: 12px;"></i>
+            <span style="color: #666; font-size: 13px; font-weight: 600; font-family: sans-serif; letter-spacing: 0.5px;">
+                OPTIONS D'AFFICHAGE
+            </span>
+        </div>
+    """, unsafe_allow_html=True)
 
-# Correction de la SyntaxError ici (vérifie bien la parenthèse finale)
-mode_vue = st.sidebar.segmented_control(
-    "vue_format", 
-    ["Semaine", "Jour"], 
-    default="Jour", 
-    label_visibility="collapsed"
-)
+    # Définit l'option par défaut si elle n'existe pas
+    if 'mode_vue' not in st.session_state:
+        st.session_state['mode_vue'] = 'Jour'
+
+    # Le conteneur stylisé qui imite tes boutons de fonction
+    st.markdown(f"""
+        <div class="custom-segmented-container">
+            <input type="radio" id="radio_semaine" name="mode_vue" value="Semaine" {"checked" if st.session_state['mode_vue'] == 'Semaine' else ""}>
+            <label for="radio_semaine" class="segment-label">
+                <i class="bi bi-calendar3-range" style="font-size: 14px; margin-right: 8px;"></i>
+                Semaine
+            </label>
+            
+            <input type="radio" id="radio_jour" name="mode_vue" value="Jour" {"checked" if st.session_state['mode_vue'] == 'Jour' else ""}>
+            <label for="radio_jour" class="segment-label">
+                <i class="bi bi-calendar3-event" style="font-size: 14px; margin-right: 8px;"></i>
+                Jour
+            </label>
+        </div>
+    """, unsafe_allow_html=True)
+
+    mode_vue = st.segmented_control(
+        "vue_format", 
+        ["Semaine", "Jour"], 
+        default="Jour", 
+        label_visibility="collapsed",
+        key="segmented_display_options"
+    )
 
 # --- COPYRIGHT ET SIGNATURE ---
 st.sidebar.divider()
