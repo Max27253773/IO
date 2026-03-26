@@ -15,7 +15,7 @@ supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 # --- 2. CONFIGURATION DE LA PAGE ---
 st.set_page_config(page_title="IO Planning", layout="wide", initial_sidebar_state="expanded")
 
-# --- 3. FONCTIONS MOTEUR (CORRIGÉES AVEC "Planning") ---
+# --- 3. FONCTIONS MOTEUR  ---
 
 @st.cache_data(ttl=2)
 def load_data():
@@ -121,7 +121,7 @@ if not st.session_state["auth"]:
             margin: auto;
         }
 
-        /* 4. LE FORMULAIRE "GLASSMORPHISM" LUMINEUX (Correction) */
+        /* 4. LE FORMULAIRE "GLASSMORPHISM" LUMINEUX */
         div[data-testid="stForm"] {
             background: rgba(255, 255, 255, 0.3) !important; /* Transparence blanche douce */
             backdrop-filter: blur(15px) !important; /* Effet de flou dépoli marqué */
