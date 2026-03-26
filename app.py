@@ -285,36 +285,66 @@ with st.sidebar:
     }
     menu = mapping.get(selected_nav)
 
-    # BLOC ACCÈS ADMIN STYLISÉ (Sans barre horizontale)
+    # BLOC ACCÈS ADMIN STYLISÉ
     is_admin = False
     if st.session_state.get("role") == "Animateur":
-        # Conteneur blanc pour l'effet "Bulle"
-        with st.container():
-            st.markdown("""
-                <div style='background-color: white; border-radius: 12px; padding: 12px; 
-                box-shadow: 0px 4px 12px rgba(0,0,0,0.08); border: 1px solid #f0f0f0; margin-bottom: 10px;'>
-                    <p style='margin: 0; color: #444; font-size: 14px; font-weight: 600; text-align: center;'>
-                        🔐 ACCÈS ADMIN
-                    </p>
-                </div>
-            """, unsafe_allow_html=True)
-            
-            # Champ de saisie sans label (plus épuré)
-            admin_key = st.text_input(
-                "Clé d'accès", 
-                type="password", 
-                key="global_pwd", 
-                label_visibility="collapsed", 
-                placeholder="Mot de passe..."
-            )
-            
-            # Feedback discret
-            if admin_key == "1234":
-                is_admin = True
-                st.markdown("<p style='color: #28a745; font-size: 12px; text-align: center; font-weight: 500;'>✓ Mode Admin Actif</p>", unsafe_allow_html=True)
-            elif admin_key != "":
-                st.markdown("<p style='color: #dc3545; font-size: 12px; text-align: center; font-weight: 500;'>✗ Incorrect</p>", unsafe_allow_html=True)
+        
+        # Injection de style spécifique pour ce container (Bulle blanche, ombre douce, coins arrondis)
+        st.markdown("""
+            <style>
+            .admin-container {
+                background-color: white !important;
+                border-radius: 12px !important;
+                padding: 12px 15px !important;
+                box-shadow: 0px 4px 12px rgba(0,0,0,0.08) !important;
+                border: 1px solid #f0f0f0 !important;
+                margin-top: 20px !important;
+                margin-bottom: 10px !important;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .admin-icon {
+                color: #444 !important;
+                font-size: 18px !important; /* Même taille que les icônes du menu */
+                margin-right: 12px !important; /* Espacement avec le texte */
+                margin-top: -3px; /* Léger ajustement pour l'alignement vertical */
+            }
+            .admin-text {
+                margin: 0 !important;
+                color: #444 !important;
+                font-size: 14px !important; /* Même taille que le texte du menu */
+                font-weight: 600 !important;
+                font-family: sans-serif !important;
+                letter-spacing: 0.5px !important;
+            }
+            </style>
+        """, unsafe_allow_html=True)
 
+        # Le container stylisé "Bulle Blanche" avec l'icône Bootstrap Intégrée
+        # 'bi-shield-lock' est l'icône correspondante (Bouclier + Cadenas)
+        st.markdown("""
+            <div class='admin-container'>
+                <i class='bi-shield-lock admin-icon'></i>
+                <p class='admin-text'>ACCÈS ADMIN</p>
+            </div>
+        """, unsafe_allow_html=True)
+            
+        # Champ de saisie minimaliste (sans label, avec placeholder)
+        admin_key = st.text_input(
+            "Clé d'accès", 
+            type="password", 
+            key="global_pwd", 
+            label_visibility="collapsed", 
+            placeholder="Entrez le mot de passe..."
+        )
+            
+        # Feedback discret (au lieu des gros st.success/st.error)
+        if admin_key == "1234":
+            is_admin = True
+            st.markdown("<p style='color: #28a745; font-size: 12px; text-align: center; font-weight: 500; margin-top: 5px;'>✓ Mode Admin Actif</p>", unsafe_allow_html=True)
+        elif admin_key != "":
+            st.markdown("<p style='color: #dc3545; font-size: 12px; text-align: center; font-weight: 500; margin-top: 5px;'>✗ Mot de passe incorrect</p>", unsafe_allow_html=True)
 # --- CALCUL AUTOMATIQUE DATE/SEMAINE ---
 maintenant = datetime.now()
 annee_actuelle = maintenant.year
