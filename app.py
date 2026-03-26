@@ -104,12 +104,12 @@ if "role" not in st.session_state:
 if not st.session_state["auth"]:
     st.markdown("""
         <style>
-        /* 1. Style de l'arrière-plan principal (Sombre et Uni) */
+        /* 1. Style de l'arrière-plan principal (Lumineux et Doux) */
         .stApp {
-            background-color: #1a1a1a !important;
+            background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%) !important;
         }
 
-        /* 2. Cache la sidebar et le header (Focus Total) */
+        /* 2. Cache la sidebar et le header */
         [data-testid="stSidebar"] { visibility: hidden; transform: translateX(-100%); }
         header { visibility: hidden; }
         
@@ -120,79 +120,52 @@ if not st.session_state["auth"]:
             margin: auto;
         }
 
-        /* 4. LE FORMULAIRE "GLASSMORPHISM" ÉPURÉ */
+        /* 4. LE FORMULAIRE "GLASSMORPHISM" LUMINEUX (Correction) */
         div[data-testid="stForm"] {
-            background: rgba(255, 255, 255, 0.08) !important; /* Forte transparence blanche */
-            backdrop-filter: blur(20px) !important; /* Effet de flou dépoli marqué */
-            -webkit-backdrop-filter: blur(20px) !important;
+            background: rgba(255, 255, 255, 0.3) !important; /* Transparence blanche douce */
+            backdrop-filter: blur(15px) !important; /* Effet de flou dépoli marqué */
+            -webkit-backdrop-filter: blur(15px) !important;
             border-radius: 25px !important; /* Bords très arrondis */
-            padding: 3.5rem 3rem 3rem 3rem !important;
-            border: 1px solid rgba(255, 255, 255, 0.1) !important; /* Bordure blanche ultra-fine */
-            box-shadow: 0 15px 35px rgba(0,0,0,0.4) !important; /* Ombre douce et profonde */
+            padding: 3rem !important;
+            border: 1px solid rgba(255, 255, 255, 0.2) !important; /* Bordure blanche ultra-fine */
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05) !important; /* Ombre douce */
         }
 
-        /* 5. Style des titres (Blanc Épuré) */
-        h1, h2, h3 {
-            color: white !important;
+        /* 5. Style des titres (Discret) */
+        h3 {
+            color: #333 !important;
             font-family: sans-serif !important;
-            font-weight: 300 !important; /* Police fine pour un look épuré */
-            letter-spacing: 2px !important;
+            font-weight: 400 !important;
+            letter-spacing: 1px !important;
             text-align: center;
         }
 
-        /* 6. Style des labels et textes d'aide (Blanc semi-transparent) */
-        .stTextInput label, .stTextInput div[data-testid="stMarkdownContainer"] p {
-            color: rgba(255, 255, 255, 0.8) !important;
-            font-family: sans-serif !important;
-            font-weight: 400 !important;
-        }
-
-        /* 7. Style des champs de saisie (Sombres, Arrondis, Discrets) */
+        /* 6. Style des champs de saisie (Clairs, Arrondis) */
         .stTextInput input {
-            background-color: rgba(0, 0, 0, 0.3) !important;
-            color: white !important;
-            border: 1px solid rgba(255, 255, 255, 0.2) !important;
-            border-radius: 12px !important; /* Bords arrondis */
+            background-color: rgba(255, 255, 255, 0.6) !important;
+            color: #333 !important;
+            border: 1px solid rgba(0, 0, 0, 0.1) !important;
+            border-radius: 12px !important;
             padding: 12px !important;
-            transition: 0.3s;
         }
 
-        .stTextInput input:focus {
-            border: 1px solid rgba(255, 255, 255, 0.5) !important;
-            box-shadow: 0 0 10px rgba(255, 255, 255, 0.1) !important;
-        }
-
-        /* 8. LE BOUTON : Sobre, Arrondi, Gris Moderne */
+        /* 7. LE BOUTON : Sobre, Épuré, Gris clair */
         button[kind="primaryFormSubmit"], button[data-testid="baseButton-secondaryFormSubmit"] {
-            background-color: rgba(255, 255, 255, 0.1) !important; /* Gris transparent */
-            color: white !important;
-            border: 1px solid rgba(255, 255, 255, 0.3) !important;
-            border-radius: 15px !important; /* Bords arrondis */
+            background-color: rgba(0, 0, 0, 0.05) !important;
+            color: #333 !important;
+            border: 1px solid rgba(0, 0, 0, 0.1) !important;
+            border-radius: 15px !important;
             width: 100% !important;
             font-weight: 600 !important;
             font-family: sans-serif !important;
             text-transform: uppercase;
             letter-spacing: 1px;
             height: 3.5rem !important;
-            margin-top: 1.5rem !important;
             transition: all 0.3s;
         }
 
         button[kind="primaryFormSubmit"]:hover {
-            background-color: rgba(255, 255, 255, 0.2) !important; /* Éclaircissement au survol */
-            box-shadow: 0 5px 15px rgba(255, 255, 255, 0.1) !important;
-        }
-
-        button[kind="primaryFormSubmit"]:active {
-            transform: scale(0.98);
-        }
-        
-        /* Personnalisation des messages de succès/erreur (Mince et épuré) */
-        .stAlert {
-            border-radius: 12px !important;
-            border: 1px solid rgba(255,255,255,0.1) !important;
-            background-color: rgba(255,255,255,0.05) !important;
-            color: white !important;
+            background-color: rgba(0, 0, 0, 0.1) !important;
         }
         </style>
     """, unsafe_allow_html=True)
