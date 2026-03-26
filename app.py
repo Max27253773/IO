@@ -259,7 +259,7 @@ with st.sidebar:
         icons=icons,
         default_index=0,
         styles={
-            "container": {"padding": "5!important", "background-color": "transparent"},
+            "container": {
             "icon": {"color": "#444", "font-size": "18px"}, 
             "nav-link": {
                 "font-size": "15px", 
@@ -400,7 +400,6 @@ d = week_days[jours_fr_liste.index(choix_j_global)]
 current_color = LOCAL_CONFIG.get(local_sel, "#000000")
 text_on_color = "#000000" if local_sel in ["PHOBOS", "NEKKAR"] else "#FFFFFF"
 
-# --- CSS COMPLET ---
 # --- CSS COMPLET ---
 st.markdown(f"""
     <style>
