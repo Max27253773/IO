@@ -7,7 +7,6 @@ from supabase import create_client
 from streamlit_option_menu import option_menu
 
 # --- 1. CONFIGURATION & CONNEXION SUPABASE ---
-# Remplace par tes vraies clés si celles-ci sont des exemples
 SUPABASE_URL = "https://uyqmviseejbvsngwbpkt.supabase.co"
 SUPABASE_KEY = "sb_publishable_tEx11emOTmYUiXip8VeRTA_XsA8jfve"
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
@@ -31,12 +30,10 @@ def load_data():
                 
             data['Date_DT'] = pd.to_datetime(data['Date_DT'], errors='coerce')
             
-            # Harmonisation des autres colonnes pour correspondre au reste du code
             cols_map = {
                 "equipe": "Equipe", "horaire": "Horaire", 
                 "local": "Local", "responsable": "Responsable"
             }
-            # On ne renomme que si la colonne en minuscule existe
             for old_col, new_col in cols_map.items():
                 if old_col in data.columns:
                     data = data.rename(columns={old_col: new_col})
@@ -597,7 +594,7 @@ elif menu == "🔍 Rechercher":
             (df['Date_DT'].dt.isocalendar().week == semaine_sel) &
             (df['Date_DT'].dt.year == annee_sel)
         )
-        resultats = df[mask].sort_values(by=['Date_DT', 'Horaire'])
+        resultats = df[mask].sort_values(by=['Date_DT', 'Horaire', 'Equipe'])
 
         if not resultats.empty:
             st.success(f"Nombre de créneau(x) trouvé(s) : {len(resultats)}")
